@@ -24,7 +24,7 @@ public class SwscaleLibrary {
 	/**
 	 * Conversion Error : a.num<br>
 	 * SKIPPED:<br>
-	 * <i>native declaration : ffmpeg_build/include/libavutil/rational.h:26</i><br>
+	 * <i>native declaration : ffmpeg_build/include/libavutil/rational.h:0</i><br>
 	 * const int64_t tmp = a.num * (int64_t)b.den - b.num * (int64_t)a.den;
 	 */
 	/** <i>native declaration : ffmpeg_build/include/libswscale/version.h</i> */

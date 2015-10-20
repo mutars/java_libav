@@ -18,6 +18,7 @@
 	<module>parent</module>
         <module>wrapper</module>
         <module>api</module>
+        <module>samples</module>
     </modules>
 
 </project>

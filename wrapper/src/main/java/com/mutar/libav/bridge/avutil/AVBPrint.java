@@ -61,7 +61,7 @@ public class AVBPrint extends StructObject {
         return this.io.getPointerField(this, 4);
     }
     /** C type : char[1024 - sizeof(ff_pad_helper_AVBPrint)] */
-/*	@Array({1024 - new com.mutar.libav.bridge.avutil.ff_pad_helper_AVBPrint().size()})
+    /*@Array({1024 - new com.mutar.libav.bridge.avutil.ff_pad_helper_AVBPrint().size()})
     @Field(5)
     public Pointer<Byte > reserved_padding() {
         return this.io.getPointerField(this, 5);
