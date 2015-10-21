@@ -15,7 +15,7 @@
  * License along with this library. If not, see 
  * <http://www.gnu.org/licenses/>.
  */
-package com.mutar.libav.api.audio;
+package com.mutar.libav.audio;
 
 import com.mutar.libav.api.exception.LibavException;
 

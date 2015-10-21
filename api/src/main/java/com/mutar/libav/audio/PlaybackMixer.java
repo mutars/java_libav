@@ -15,7 +15,7 @@
  * License along with this library. If not, see 
  * <http://www.gnu.org/licenses/>.
  */
-package com.mutar.libav.api.audio;
+package com.mutar.libav.audio;
 
 import java.nio.ByteOrder;
 import java.util.HashMap;
