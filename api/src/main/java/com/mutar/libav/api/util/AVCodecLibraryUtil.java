@@ -143,6 +143,13 @@ public final class AVCodecLibraryUtil {
 
         return intByRef.getInt() != 0;
     }
+    
+
+    public static void getDefaults(AVCodecContext avctx, AVCodec codec) throws LibavException {
+        int result = avCodecLib.avcodec_get_context_defaults3(getPointer(avctx), getPointer(codec));
+        if (result != 0)
+            throw new LibavException(result);
+    }
 
 
     private static <T extends StructObject> Pointer<T> getPointer(T obj) {

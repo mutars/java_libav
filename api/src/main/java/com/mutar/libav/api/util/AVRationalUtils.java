@@ -103,6 +103,10 @@ public class AVRationalUtils {
         avr.den((int)den);
         return avr;
     }
+    
+    public static long longValue(AVRational r1) {
+    	return r1.num()/r1.den();
+    }
 
     private static long gcd(long a, long b) {
         if (a < 0)

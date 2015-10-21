@@ -1,8 +1,8 @@
 package com.mutar.libav.api.util;
 
 import org.bridj.IntValuedEnum;
+import org.bridj.NativeObject;
 import org.bridj.Pointer;
-import org.bridj.StructObject;
 
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.bridge.avutil.AVFrame;
@@ -40,6 +40,14 @@ public final class AVUtilLibraryUtil {
             throw new LibavException(err);
 
         return result;
+    }
+    
+    public static <T extends NativeObject> void av_free(T obj) {
+    	av_free(getPointer(obj));
+    }
+    
+    public static <T extends NativeObject> void av_free(Pointer<T> ptr) {
+    	utilLib.av_free(ptr);
     }
 
     public static void free(AVFrame frame) {
@@ -93,12 +101,16 @@ public final class AVUtilLibraryUtil {
             default: return false;
         }
     }
+    
+    public static long getDefaultChannelLayout(int nb_channels) {
+    	return utilLib.av_get_default_channel_layout(nb_channels);
+    }
 
     public static boolean isPlanar(IntValuedEnum<AVSampleFormat > sample_fmt) {
         return utilLib.av_sample_fmt_is_planar(sample_fmt) == 1;
     }
 
-    private static <T extends StructObject> Pointer<T> getPointer(T obj) {
+    private static <T extends NativeObject> Pointer<T> getPointer(T obj) {
         return Pointer.getPointer(obj);
     }
 

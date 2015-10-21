@@ -20,12 +20,17 @@ package com.mutar.libav;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.mutar.libav.api.IDecoder;
+import com.mutar.libav.api.IEncoder;
+import com.mutar.libav.api.IMediaDecoder;
+import com.mutar.libav.api.IMediaEncoder;
+import com.mutar.libav.api.IMediaReader;
+import com.mutar.libav.api.IMediaWriter;
+import com.mutar.libav.api.exception.LibavException;
+import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
+import com.mutar.libav.video.FrameScaler;
 
- * Transcoding sample.
- *
- * @author Ondrej Perutka
- */
 public class TranscodeSample {
 
     public static void main(String[] args) {
@@ -48,7 +53,7 @@ public class TranscodeSample {
 
             IDecoder dec;
             IEncoder enc;
-            ICodecContextWrapper cc1, cc2;
+            AVCodecContext cc1, cc2;
             int si;
 
             // init video transcoding of the first video stream if there is at
@@ -57,11 +62,11 @@ public class TranscodeSample {
                 md.setVideoStreamDecodingEnabled(0, true);
                 dec = md.getVideoStreamDecoder(0);
                 cc1 = dec.getCodecContext();
-                si = mw.addVideoStream(videoCodecId, cc1.getWidth(), cc1.getHeight());
+                si = mw.addVideoStream(videoCodecId, cc1.width(), cc1.height());
                 enc = me.getVideoStreamEncoder(si);
                 cc2 = enc.getCodecContext();
-                cc2.setPixelFormat(cc1.getPixelFormat());
-                scaler = new FrameScaler(cc1.getWidth(), cc1.getHeight(), cc1.getPixelFormat(), cc2.getWidth(), cc2.getHeight(), cc2.getPixelFormat());
+                cc2.pix_fmt(cc1.pix_fmt());
+                scaler = new FrameScaler(cc1.width(), cc1.height(), cc1.pix_fmt(), cc2.width(), cc2.height(), cc2.pix_fmt());
                 scaler.addFrameConsumer(enc);
                 dec.addFrameConsumer(scaler);
             }
@@ -72,7 +77,7 @@ public class TranscodeSample {
                 md.setAudioStreamDecodingEnabled(0, true);
                 dec = md.getAudioStreamDecoder(0);
                 cc1 = dec.getCodecContext();
-                si = mw.addAudioStream(audioCodecId, cc1.getSampleRate(), cc1.getSampleFormat(), cc1.getChannels());
+                si = mw.addAudioStream(audioCodecId, cc1.sample_rate(), cc1.sample_fmt(), cc1.channels());
                 dec.addFrameConsumer(me.getAudioStreamEncoder(si));
             }
 
