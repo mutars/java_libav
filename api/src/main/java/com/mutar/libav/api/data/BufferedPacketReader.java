@@ -17,9 +17,12 @@
  */
 package com.mutar.libav.api.data;
 
-import java.nio.Buffer;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.mutar.libav.api.util.AVCodecLibraryUtil;
+import com.mutar.libav.api.util.AVFormatLibraryUtil;
+import com.mutar.libav.api.util.Buffer;
+import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avformat.AVFormatContext;
 
 /**
@@ -31,9 +34,9 @@ public class BufferedPacketReader {
 
     private final AVFormatContext formatContext;
     private final PacketPool packetPool;
-    private IPacketWrapper packet;
+    private AVPacket packet;
 
-    private final Buffer<IPacketWrapper> buffer;
+    private final Buffer<AVPacket> buffer;
     private boolean eof;
 
     private ReaderThread readerThread;
@@ -48,10 +51,10 @@ public class BufferedPacketReader {
      */
     public BufferedPacketReader(AVFormatContext formatContext, int bufferSize) {
         this.formatContext = formatContext;
-        packet = PacketWrapperFactory.getInstance().alloc();
         packetPool = new PacketPool();
+        packet = packetPool.getEmptyPacket();
 
-        buffer = new Buffer<IPacketWrapper>(bufferSize);
+        buffer = new Buffer<AVPacket>(bufferSize);
         eof = false;
 
         readerThread = null;
@@ -97,12 +100,12 @@ public class BufferedPacketReader {
             throw new RuntimeException(ex);
         }
 
-        IPacketWrapper pw;
+        AVPacket pw;
         synchronized (buffer) {
             while (buffer.getItemCount() > 0) {
                 pw = buffer.get();
                 if (pw != null)
-                    pw.free();
+                    AVCodecLibraryUtil.free(pw);
             }
         }
 
@@ -148,8 +151,8 @@ public class BufferedPacketReader {
      *
      * @return packet wrapper or null in case of EOF
      */
-    public IPacketWrapper nextPacket() {
-        IPacketWrapper pw;
+    public AVPacket nextPacket() {
+        AVPacket pw;
         try {
             lock.lockInterruptibly();
         } catch (InterruptedException ex) {
@@ -176,7 +179,7 @@ public class BufferedPacketReader {
         return pw;
     }
 
-    private boolean putPacket(IPacketWrapper pw) {
+    private boolean putPacket(AVPacket pw) {
         if (pw == null)
             eof = true;
 
@@ -202,15 +205,15 @@ public class BufferedPacketReader {
 
         @Override
         public void run() {
-            IPacketWrapper pw;
+            AVPacket pw;
             boolean put;
 
             while (!stop) {
-                if (formatContext.readNextPacket(packet))
+                if (AVFormatLibraryUtil.readNextPacket(formatContext,packet))
                     pw = packetPool.clonePacket(packet);
                 else
                     pw = null;
-                packet.free();
+                AVCodecLibraryUtil.free(packet);
 
                 do {
                     //System.out.printf("got next packet: pts = %d, dts = %d, stream_index = %d, pos = %d\n", pw.getPts(), pw.getDts(), pw.getStreamIndex(), pw.getPosition());
@@ -220,7 +223,7 @@ public class BufferedPacketReader {
                 if (pw == null)
                     stop = true;
                 else if (!put)
-                    pw.free();
+                    AVCodecLibraryUtil.free(pw);
             }
         }
     }
