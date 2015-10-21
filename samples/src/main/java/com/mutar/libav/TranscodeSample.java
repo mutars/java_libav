@@ -20,20 +20,8 @@ package com.mutar.libav;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.libav.DefaultMediaDecoder;
-import org.libav.DefaultMediaEncoder;
-import org.libav.IDecoder;
-import org.libav.IEncoder;
-import org.libav.IMediaDecoder;
-import org.libav.IMediaEncoder;
-import org.libav.IMediaReader;
-import org.libav.IMediaWriter;
-import org.libav.LibavException;
-import org.libav.avcodec.CodecID;
-import org.libav.avcodec.ICodecContextWrapper;
-import org.libav.video.FrameScaler;
+import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
 
-/**
  * Transcoding sample.
  *
  * @author Ondrej Perutka
@@ -43,8 +31,8 @@ public class TranscodeSample {
     public static void main(String[] args) {
         String srcUrl = "/home/sepe/test1.mp4"; // some source multimedia file/stream
         String dstUrl = "/home/sepe/bar.mkv"; // destination file name
-        CodecID videoCodecId = CodecID.MPEG4; // output video codec
-        CodecID audioCodecId = CodecID.MP2; // output audio codec
+        AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_MPEG4; // output video codec
+        AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_MP2; // output audio codec
 
         IMediaDecoder md = null;
         IMediaEncoder me = null;

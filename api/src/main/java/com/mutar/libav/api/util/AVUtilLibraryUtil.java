@@ -1,5 +1,6 @@
 package com.mutar.libav.api.util;
 
+import org.bridj.IntValuedEnum;
 import org.bridj.Pointer;
 import org.bridj.StructObject;
 
@@ -7,6 +8,7 @@ import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.bridge.avutil.AVFrame;
 import com.mutar.libav.bridge.avutil.AvutilLibrary;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVPixelFormat;
+import com.mutar.libav.bridge.avutil.AvutilLibrary.AVSampleFormat;
 import com.mutar.libav.service.LibraryManager;
 
 
@@ -48,6 +50,52 @@ public final class AVUtilLibraryUtil {
             tmp.set(getPointer(frame));
             utilLib.av_frame_free(tmp);
             frame = null;
+    }
+
+    public static void defaults(AVFrame frame) {
+            if (frame == null)
+                return;
+            utilLib.av_frame_unref(getPointer(frame));
+    }
+
+    public static int getBytesPerSample(IntValuedEnum<AvutilLibrary.AVSampleFormat > sample_fmt) {
+        return utilLib.av_get_bytes_per_sample(sample_fmt);
+    }
+
+    public static boolean isSigned(IntValuedEnum<AVSampleFormat > sample_fmt) {
+        switch (sample_fmt.toString()) {
+            case "AV_SAMPLE_FMT_DBL":
+            case "AV_SAMPLE_FMT_FLT":
+            case "AV_SAMPLE_FMT_S16":
+            case "AV_SAMPLE_FMT_S32":
+            case "AV_SAMPLE_FMT_DBLP" :
+            case "AV_SAMPLE_FMT_FLTP":
+            case "AV_SAMPLE_FMT_S16P":
+            case "AV_SAMPLE_FMT_S32P": return true;
+            default: return false;
+        }
+    }
+
+    public static boolean isUnsigned(IntValuedEnum<AVSampleFormat > sample_fmt) {
+        switch (sample_fmt.toString()) {
+            case "AV_SAMPLE_FMT_U8":
+            case "AV_SAMPLE_FMT_U8P": return true;
+            default: return false;
+        }
+    }
+
+    public static boolean isReal(IntValuedEnum<AVSampleFormat > sample_fmt) {
+        switch (sample_fmt.toString()) {
+            case "AV_SAMPLE_FMT_DBL":
+            case "AV_SAMPLE_FMT_FLT":
+            case "AV_SAMPLE_FMT_DBLP":
+            case "AV_SAMPLE_FMT_FLTP": return true;
+            default: return false;
+        }
+    }
+
+    public static boolean isPlanar(IntValuedEnum<AVSampleFormat > sample_fmt) {
+        return utilLib.av_sample_fmt_is_planar(sample_fmt) == 1;
     }
 
     private static <T extends StructObject> Pointer<T> getPointer(T obj) {
