@@ -17,6 +17,9 @@ import com.mutar.libav.service.LibraryManager;
 
 public final class AVCodecLibraryUtil {
 
+    public static final int AVCODEC_MAX_AUDIO_FRAME_SIZE  = 192000;
+    public static final int AVCODEC_FRAME_DATA_LENGHT = 8;
+
     private static final AvcodecLibrary avCodecLib;
     private final static Pointer<Integer> intByRef;
     static {
@@ -134,7 +137,7 @@ public final class AVCodecLibraryUtil {
         return false;
     }
 
-    public boolean encodeAudioFrame(AVCodecContext avctx, AVFrame frame, AVPacket packet) throws LibavException {
+    public static boolean encodeAudioFrame(AVCodecContext avctx, AVFrame frame, AVPacket packet) throws LibavException {
         intByRef.setInt(0);
 
         int len = avCodecLib.avcodec_encode_audio2(getPointer(avctx), getPointer(packet), frame == null ? null : getPointer(frame), intByRef);
@@ -143,7 +146,7 @@ public final class AVCodecLibraryUtil {
 
         return intByRef.getInt() != 0;
     }
-    
+
 
     public static void getDefaults(AVCodecContext avctx, AVCodec codec) throws LibavException {
         int result = avCodecLib.avcodec_get_context_defaults3(getPointer(avctx), getPointer(codec));
@@ -151,9 +154,40 @@ public final class AVCodecLibraryUtil {
             throw new LibavException(result);
     }
 
+    public static void fillAudioFrame(AVFrame frame, int sampleCount, int channelCount, IntValuedEnum<AVSampleFormat > sampleFormat, Pointer<Byte> buffer, int bufferSize) throws LibavException {
+        fillAudioFrame(frame, sampleCount, channelCount, sampleFormat, buffer, bufferSize, sampleCount);
+    }
+
+
+    public static void fillAudioFrame(AVFrame frame, int sampleCount, int channelCount, IntValuedEnum<AVSampleFormat > sampleFormat, Pointer<Byte> buffer, int bufferSize, int bufferSampleCapacity) throws LibavException {
+        frame.nb_samples(bufferSampleCapacity);
+        int res = avCodecLib.avcodec_fill_audio_frame(getPointer(frame), channelCount, sampleFormat, buffer, bufferSize, 1);
+        if (res != 0)
+            throw new LibavException(res);
+
+        int ls = sampleCount * AVUtilLibraryUtil.getBytesPerSample(sampleFormat);
+        if (!AVUtilLibraryUtil.isPlanar(sampleFormat))
+            ls *= channelCount;
+
+        frame.linesize().set(0, ls);
+        frame.nb_samples(sampleCount);
+    }
+
 
     private static <T extends StructObject> Pointer<T> getPointer(T obj) {
         return Pointer.getPointer(obj);
+    }
+
+    public static Pointer<AvcodecLibrary.ReSampleContext > audioResampleInit(int output_channels, int input_channels, int output_rate, int input_rate, IntValuedEnum<AVSampleFormat > sample_fmt_out, IntValuedEnum<AVSampleFormat > sample_fmt_in, int filter_length, int log2_phase_count, int linear, double cutoff) {
+        return avCodecLib.av_audio_resample_init(output_channels,  input_channels,  output_rate,  input_rate,  sample_fmt_out,  sample_fmt_in,  filter_length,  log2_phase_count,  linear,  cutoff);
+    }
+
+    public static int audioResample(Pointer<AvcodecLibrary.ReSampleContext > s, Pointer<Short > output, Pointer<Short > input, int nb_samples) {
+        return avCodecLib.audio_resample(s, output, input, nb_samples);
+    }
+
+    public static void audioResampleClose(Pointer<AvcodecLibrary.ReSampleContext > s) {
+         avCodecLib.audio_resample_close(s);
     }
 
 }

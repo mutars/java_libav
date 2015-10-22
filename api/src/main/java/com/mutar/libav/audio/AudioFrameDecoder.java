@@ -1,170 +1,148 @@
-/*
- * Copyright (C) 2012 Ondrej Perutka
- *
- * This program is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation, either 
- * version 3 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public 
- * License along with this library. If not, see 
- * <http://www.gnu.org/licenses/>.
- */
 package com.mutar.libav.audio;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import org.bridj.Pointer;
-import org.libav.IDecoder;
-import org.libav.LibavException;
-import org.libav.avcodec.*;
-import org.libav.avcodec.bridge.AVCodecLibrary;
-import org.libav.avformat.IStreamWrapper;
-import org.libav.avutil.MediaType;
-import org.libav.avutil.bridge.AVUtilLibrary;
-import org.libav.bridge.LibraryManager;
-import org.libav.data.IFrameConsumer;
-import org.libav.util.Rational;
 
-/**
- * Audio frame decoder.
- * 
- * @author Ondrej Perutka
- */
+import org.bridj.Pointer;
+
+import com.mutar.libav.api.IDecoder;
+import com.mutar.libav.api.data.IFrameConsumer;
+import com.mutar.libav.api.exception.LibavException;
+import com.mutar.libav.api.util.AVCodecLibraryUtil;
+import com.mutar.libav.api.util.AVRationalUtils;
+import com.mutar.libav.api.util.AVUtilLibraryUtil;
+import com.mutar.libav.bridge.avcodec.AVCodecContext;
+import com.mutar.libav.bridge.avcodec.AVPacket;
+import com.mutar.libav.bridge.avcodec.AvcodecLibrary;
+import com.mutar.libav.bridge.avformat.AVStream;
+import com.mutar.libav.bridge.avutil.AVFrame;
+import com.mutar.libav.bridge.avutil.AVRational;
+import com.mutar.libav.bridge.avutil.AvutilLibrary;
+import com.mutar.libav.bridge.avutil.AvutilLibrary.AVMediaType;
+
 public class AudioFrameDecoder implements IDecoder {
-    
-    private static final AVUtilLibrary utilLib = LibraryManager.getInstance().getAVUtilLibrary();
-    
-    private final IStreamWrapper stream;
-    private final ICodecContextWrapper cc;
-    
-    private Rational sTimeBase;
+
+    private final AVStream stream;
+    private final AVCodecContext cc;
+
+    private AVRational sTimeBase;
     private long pts;
-    
-    private IFrameWrapper audioFrame;
+
+    private AVFrame audioFrame;
     private Pointer<Byte> sampleBuffer;
     private int sampleBufferSize;
-    
+
     private final Set<IFrameConsumer> consumers;
 
     /**
      * Create a new audio frame decoder for the given audio stream.
-     * 
+     *
      * @param stream an audio stream
      * @throws LibavException if the decoder cannot be created for some reason
      * (caused by the Libav)
      */
-    public AudioFrameDecoder(IStreamWrapper stream) throws LibavException {
+    public AudioFrameDecoder(AVStream stream) throws LibavException {
         this.stream = stream;
-        
-        cc = stream.getCodecContext();
-        cc.clearWrapperCache();
-        if (cc.getCodecType() != MediaType.AUDIO)
+
+        cc = stream.codec().get();
+        if (cc.codec_type() != AVMediaType.AVMEDIA_TYPE_AUDIO)
             throw new IllegalArgumentException("not an audio stream");
-        
-        cc.open(CodecWrapperFactory.getInstance().findDecoder(cc.getCodecId()));
-        
-        sTimeBase = stream.getTimeBase().mul(1000);
+        AVCodecLibraryUtil.open(cc, AVCodecLibraryUtil.findDecoder(cc.codec_id()));
+
+        sTimeBase = AVRationalUtils.mul(stream.time_base(), 1000L);
         pts = 0;
-        
-        audioFrame = FrameWrapperFactory.getInstance().allocFrame();
-        sampleBufferSize = AVCodecLibrary.AVCODEC_MAX_AUDIO_FRAME_SIZE;
-        sampleBuffer = utilLib.av_malloc(AVCodecLibrary.AVCODEC_MAX_AUDIO_FRAME_SIZE + AVCodecLibrary.FF_INPUT_BUFFER_PADDING_SIZE).as(Byte.class);
-        if (sampleBuffer == null)
-            throw new OutOfMemoryError("unable to allocate memory to decode the audio stream");
-        audioFrame.getData().set(0, sampleBuffer);
-        audioFrame.getLineSize().set(0, sampleBufferSize);
+
+        audioFrame = AVUtilLibraryUtil.allocateFrame();
+        sampleBufferSize = AVCodecLibraryUtil.AVCODEC_MAX_AUDIO_FRAME_SIZE;
+        sampleBuffer = AVUtilLibraryUtil.malloc(AVCodecLibraryUtil.AVCODEC_MAX_AUDIO_FRAME_SIZE + AvcodecLibrary.FF_INPUT_BUFFER_PADDING_SIZE).as(Byte.class);
+        audioFrame.data().set(0, sampleBuffer);
+        audioFrame.linesize().set(0, sampleBufferSize);
 
         consumers = Collections.synchronizedSet(new HashSet<IFrameConsumer>());
     }
 
     @Override
-    public ICodecContextWrapper getCodecContext() {
+    public AVCodecContext getCodecContext() {
         return cc;
     }
 
     @Override
-    public IStreamWrapper getStream() {
+    public AVStream getStream() {
         return stream;
-    }
-    
-    @Override
-    public synchronized void close() {
-        if (audioFrame != null)
-            audioFrame.free();
-        if (sampleBuffer != null)
-            utilLib.av_free(sampleBuffer);
-        cc.close();
-        
-        audioFrame = null;
-        sampleBuffer = null;
-    }
-    
-    @Override
-    public boolean isClosed() {
-        return cc.isClosed();
     }
 
     @Override
-    public synchronized void processPacket(Object producer, IPacketWrapper packet) throws LibavException {
-        if (isClosed() || packet.getStreamIndex() != stream.getIndex())
+    public synchronized void close() {
+        if (audioFrame != null)
+            AVUtilLibraryUtil.free(audioFrame);
+        if (sampleBuffer != null)
+            AVUtilLibraryUtil.av_free(sampleBuffer);
+        AVCodecLibraryUtil.close(cc);
+
+        audioFrame = null;
+        sampleBuffer = null;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return cc == null;
+    }
+
+    @Override
+    public synchronized void processPacket(Object producer, AVPacket packet) throws LibavException {
+        if (isClosed() || packet.stream_index() != stream.index())
             return;
-        
+
         //System.out.printf("AP: dts = %d\n", sTimeBase.mul(packet.getDts()).longValue());
-        Pointer<Byte> tmp = packet.getData();
-        while (packet.getSize() > 0) {
-            audioFrame.getLineSize().set(0, sampleBufferSize);
-            if (cc.decodeAudioFrame(packet, audioFrame))
+        Pointer<Byte> tmp = packet.data();
+        while (packet.size() > 0) {
+            audioFrame.linesize().set(0, sampleBufferSize);
+            if (AVCodecLibraryUtil.decodeAudioFrame(cc, packet, audioFrame))
                 sendFrame(transformPts(audioFrame));
         }
-        packet.setData(tmp);
+        packet.data(tmp);
     }
 
     @Override
     public synchronized void flush() throws LibavException {
-        IFrameWrapper fr;
+        AVFrame fr;
         while ((fr = flushContext()) != null)
             sendFrame(transformPts(fr));
     }
-    
-    private synchronized IFrameWrapper flushContext() throws LibavException {
+
+    private synchronized AVFrame flushContext() throws LibavException {
         if (isClosed())
             return null;
-        
-        IPacketWrapper packet = PacketWrapperFactory.getInstance().alloc();
-        IFrameWrapper result = null;
-        
-        packet.setSize(0);
-        packet.setData(null);
-        audioFrame.getLineSize().set(0, sampleBufferSize);
-        if (cc.decodeAudioFrame(packet, audioFrame))
+
+        AVPacket packet = AVCodecLibraryUtil.alloc_packet();
+        AVFrame result = null;
+
+        packet.size(0);
+        packet.data(null);
+        audioFrame.linesize().set(0, sampleBufferSize);
+        if (AVCodecLibraryUtil.decodeAudioFrame(cc, packet, audioFrame))
             result = audioFrame;
-        packet.free();
-        
+        AVCodecLibraryUtil.free(packet);
+
         return result;
     }
-    
-    protected void sendFrame(IFrameWrapper frame) throws LibavException {
+
+    protected void sendFrame(AVFrame frame) throws LibavException {
         synchronized (consumers) {
             for (IFrameConsumer c : consumers)
                 c.processFrame(this, frame);
         }
     }
-    
-    private IFrameWrapper transformPts(IFrameWrapper frame) {
-        if (frame.getPacketDts() != AVUtilLibrary.AV_NOPTS_VALUE)
-            frame.setPts(sTimeBase.mul(frame.getPacketDts()).longValue());
+
+    private AVFrame transformPts(AVFrame frame) {
+        if (frame.pkt_dts() != AvutilLibrary.AV_NOPTS_VALUE)
+            frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(sTimeBase, frame.pkt_dts())));
         else {
-            frame.setPts(pts);
-            pts += frame.getLineSize().get(0) * 1000 / (cc.getChannels() * cc.getSampleRate() * cc.getSampleFormat().getBytesPerSample());
+            frame.pts(pts);
+            pts += frame.linesize().get(0) * 1000 / (cc.channels() * cc.sample_rate() * AVUtilLibraryUtil.getBytesPerSample(cc.sample_fmt()));
         }
-        
+
         return frame;
     }
 
@@ -177,5 +155,5 @@ public class AudioFrameDecoder implements IDecoder {
     public void removeFrameConsumer(IFrameConsumer c) {
         consumers.remove(c);
     }
-    
+
 }

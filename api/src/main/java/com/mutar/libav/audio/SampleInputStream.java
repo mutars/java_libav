@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2012 Ondrej Perutka
  *
- * This program is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation, either 
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation, either
  * version 3 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
@@ -11,8 +11,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public 
- * License along with this library. If not, see 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mutar.libav.audio;
@@ -22,12 +22,13 @@ import java.io.InputStream;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.libav.LibavException;
+
+import com.mutar.libav.api.exception.LibavException;
 
 /**
  * Sample input stream. It is an adapter between an audio frame consumer and
  * audio input stream.
- * 
+ *
  * @author Ondrej Perutka
  */
 public class SampleInputStream extends InputStream implements IAudioFrameConsumer {
@@ -38,32 +39,32 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
     private int size;
     private boolean blockingFrameProcessing;
     private Semaphore emptySpace;
-    
+
     private boolean eof;
-    
+
     /**
      * Create a new sample input stream and set its buffer size. The buffer size
      * must be greather than the biggest frame size of all frames passed to
      * this object via the processFrame method.
-     * 
+     *
      * @param bufferSize a buffer size
      */
     public SampleInputStream(int bufferSize) {
         this(bufferSize, true);
     }
-    
+
     /**
-     * Create a new sample input stream, set its buffer size and the blocking 
-     * frame processing flag. The buffer size must be greather than the biggest 
-     * frame size of all frames passed to this object via the processFrame 
+     * Create a new sample input stream, set its buffer size and the blocking
+     * frame processing flag. The buffer size must be greather than the biggest
+     * frame size of all frames passed to this object via the processFrame
      * method.
-     * 
+     *
      * If the blocking frame processing is true, the processFrame method waits
      * until there is a space to store the whole frame inside the buffer. If the
      * blocking frame processing is false, the processFrame method may drop
      * data from the begining of the buffer to get enough space to store the
      * audio frame.
-     * 
+     *
      * @param bufferSize a buffer size
      * @param blockingFrameProcessing a blocking frame processing flag
      */
@@ -74,19 +75,19 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
         this.size = 0;
         this.blockingFrameProcessing = blockingFrameProcessing;
         this.emptySpace = new Semaphore(bufferSize);
-        
+
         this.eof = false;
     }
 
     /**
      * Get blocking frame processing flag.
-     * 
+     *
      * If the blocking frame processing is true, the processFrame method waits
      * until there is a space to store the whole frame inside the buffer. If the
      * blocking frame processing is false, the processFrame method may drop
      * data from the begining of the buffer to get enough space to store the
      * audio frame.
-     * 
+     *
      * @return blocking frame processing flag
      */
     public boolean isFrameProcessingBlocking() {
@@ -95,19 +96,19 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
 
     /**
      * Set blocking frame processing flag.
-     * 
+     *
      * If the blocking frame processing is true, the processFrame method waits
      * until there is a space to store the whole frame inside the buffer. If the
      * blocking frame processing is false, the processFrame method may drop
      * data from the begining of the buffer to get enough space to store the
      * audio frame.
-     * 
+     *
      * @param blockingFrameProcessing a blocking frame processing flag
      */
     public void setBlockingFrameProcessing(boolean blockingFrameProcessing) {
         this.blockingFrameProcessing = blockingFrameProcessing;
     }
-    
+
     private int dropBufferData(int len) {
         synchronized (buffer) {
             if (len <= 0)
@@ -120,7 +121,7 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
             return len;
         }
     }
-    
+
     /**
      * Drop all data stored inside the buffer.
      */
@@ -134,7 +135,7 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
     public void processFrame(Object producer, AudioFrame frame) throws LibavException {
         int tmp, len = frame.getFrameSize();
         byte[] data = frame.getSamples();
-        
+
         if (len > buffer.length)
             throw new LibavException("sample stream buffer is smaller than frame");
         if (blockingFrameProcessing) {
@@ -145,25 +146,25 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
                 return;
             }
         }
-        
+
         synchronized (buffer) {
             if (len > (buffer.length - size) && !blockingFrameProcessing)
                 dropBufferData(len - buffer.length + size);
-            
+
             tmp = buffer.length - end;
             if (tmp < len) {
                 System.arraycopy(data, 0, buffer, end, tmp);
                 System.arraycopy(data, tmp, buffer, 0, len - tmp);
             } else
                 System.arraycopy(data, 0, buffer, end, len);
-            
+
             end = (end + len) % buffer.length;
             size += len;
-            
+
             buffer.notifyAll();
         }
     }
-    
+
     @Override
     public int available() throws IOException {
         return size;
@@ -228,7 +229,7 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
             throw new IndexOutOfBoundsException();
         if (len == 0)
             return 0;
-        
+
         synchronized (buffer) {
             int rest = len;
             while (rest > 0) {
@@ -256,7 +257,7 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
                 else
                     return len - rest;
             }
-            
+
             return len;
         }
     }
@@ -265,5 +266,5 @@ public class SampleInputStream extends InputStream implements IAudioFrameConsume
     public long skip(long l) throws IOException {
         return dropBufferData((int)l);
     }
-    
+
 }

@@ -19,6 +19,8 @@ package com.mutar.libav.api;
 
 import java.io.FileNotFoundException;
 
+import org.bridj.IntValuedEnum;
+
 import com.mutar.libav.api.data.IPacketConsumer;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
@@ -86,7 +88,7 @@ public interface IMediaWriter extends IPacketConsumer {
      * @return index of the created video stream
      * @throws LibavException if an error occurs while creating a new stream
      */
-    int addVideoStream(AVCodecID codecId, int width, int height) throws LibavException;
+    int addVideoStream(IntValuedEnum<AVCodecID> codecId, int width, int height) throws LibavException;
 
     /**
      * Get stream wrapper for the video stream at the given index.
@@ -113,7 +115,7 @@ public interface IMediaWriter extends IPacketConsumer {
      * @return index of the created audio stream
      * @throws LibavException if an error occurs while creating a new stream
      */
-    int addAudioStream(AVCodecID codecId, int sampleRate, AVSampleFormat sampleFormat, int channelCount) throws LibavException;
+    int addAudioStream(IntValuedEnum<AVCodecID> codecId, int sampleRate, IntValuedEnum<AVSampleFormat> sampleFormat, int channelCount) throws LibavException;
 
     /**
      * Get stream wrapper for the audio stream at the given index.

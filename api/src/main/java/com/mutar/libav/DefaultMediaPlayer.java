@@ -1,45 +1,28 @@
-/*
- * Copyright (C) 2012 Ondrej Perutka
- *
- * This program is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation, either 
- * version 3 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public 
- * License along with this library. If not, see 
- * <http://www.gnu.org/licenses/>.
- */
 package com.mutar.libav;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.libav.audio.AudioFrameDecoder;
-import org.libav.avcodec.IFrameWrapper;
-import org.libav.avformat.IFormatContextWrapper;
-import org.libav.avformat.IInputFormatWrapper;
-import org.libav.avformat.IStreamWrapper;
-import org.libav.data.IPacketConsumer;
-import org.libav.video.VideoFrameDecoder;
 
-/**
- * Default implementation of the media player interface.
- * 
- * @author Ondrej Perutka
- */
+import com.mutar.libav.api.IDecoder;
+import com.mutar.libav.api.IMediaPlayer;
+import com.mutar.libav.api.IMediaReader;
+import com.mutar.libav.api.data.IPacketConsumer;
+import com.mutar.libav.api.exception.LibavException;
+import com.mutar.libav.audio.AudioFrameDecoder;
+import com.mutar.libav.bridge.avformat.AVFormatContext;
+import com.mutar.libav.bridge.avformat.AVInputFormat;
+import com.mutar.libav.bridge.avformat.AVStream;
+import com.mutar.libav.bridge.avutil.AVFrame;
+import com.mutar.libav.video.VideoFrameDecoder;
+
 public class DefaultMediaPlayer implements IMediaPlayer {
 
     private IMediaReader mr;
     private boolean liveStream;
-    
+
     private IDecoder[] aDecoders;
     private IDecoder[] vDecoders;
-    
+
     private ThreadedStreamPlayer[] streamPlayers;
     private Thread[] playerThreads;
     private long stopPosition;
@@ -48,98 +31,98 @@ public class DefaultMediaPlayer implements IMediaPlayer {
     /**
      * Create a new media player and open the given media URL using the default
      * media decoder.
-     * 
+     *
      * @param url a media URL
-     * @throws LibavException if an error occurs while opening or player 
+     * @throws LibavException if an error occurs while opening or player
      * initialization
      */
     public DefaultMediaPlayer(String url) throws LibavException {
         this(url, isUrlLiveStream(url));
     }
-    
+
     /**
      * Create a new media player, open the given media URL using the default
      * media decoder and set the live stream flag.
-     * 
+     *
      * @param url a media URL
-     * @param liveStream live stream flag; it changes time synchronization 
+     * @param liveStream live stream flag; it changes time synchronization
      * settings to satisfy live stream needs
-     * @throws LibavException if an error occurs while opening or player 
+     * @throws LibavException if an error occurs while opening or player
      * initialization
      */
     public DefaultMediaPlayer(String url, boolean liveStream) throws LibavException {
         this(new DefaultMediaReader(url), liveStream);
     }
-    
+
     /**
      * Create a new media player and open the given media URL using the default
      * media decoder and forcing the input format.
-     * 
+     *
      * @param url a media URL
      * @param inputFormat input format short name
-     * @throws LibavException if an error occurs while opening or player 
+     * @throws LibavException if an error occurs while opening or player
      * initialization
      */
     public DefaultMediaPlayer(String url, String inputFormat) throws LibavException {
         this(url, inputFormat, isUrlLiveStream(url));
     }
-    
+
     /**
      * Create a new media player, open the given media URL using the default
      * media decoder and forcing the input format and set the live stream flag.
-     * 
+     *
      * @param url a media URL
      * @param inputFormat input format short name
-     * @param liveStream live stream flag; it changes time synchronization 
+     * @param liveStream live stream flag; it changes time synchronization
      * settings to satisfy live stream needs
-     * @throws LibavException if an error occurs while opening or player 
+     * @throws LibavException if an error occurs while opening or player
      * initialization
      */
     public DefaultMediaPlayer(String url, String inputFormat, boolean liveStream) throws LibavException {
         this(new DefaultMediaReader(url, inputFormat), liveStream);
     }
-    
+
     /**
      * Create a new media player and open the given media URL using the default
      * media decoder and forcing the input format.
-     * 
+     *
      * @param url a media URL
      * @param inputFormat input format
-     * @throws LibavException if an error occurs while opening or player 
+     * @throws LibavException if an error occurs while opening or player
      * initialization
      */
-    public DefaultMediaPlayer(String url, IInputFormatWrapper inputFormat) throws LibavException {
+    public DefaultMediaPlayer(String url, AVInputFormat inputFormat) throws LibavException {
         this(url, inputFormat, isUrlLiveStream(url));
     }
-    
+
     /**
      * Create a new media player, open the given media URL using the default
      * media decoder and forcing the input format and set the live stream flag.
-     * 
+     *
      * @param url a media URL
      * @param inputFormat input format
-     * @param liveStream live stream flag; it changes time synchronization 
+     * @param liveStream live stream flag; it changes time synchronization
      * settings to satisfy live stream needs
-     * @throws LibavException if an error occurs while opening or player 
+     * @throws LibavException if an error occurs while opening or player
      * initialization
      */
-    public DefaultMediaPlayer(String url, IInputFormatWrapper inputFormat, boolean liveStream) throws LibavException {
+    public DefaultMediaPlayer(String url, AVInputFormat inputFormat, boolean liveStream) throws LibavException {
         this(new DefaultMediaReader(url, inputFormat), liveStream);
     }
-    
+
     protected DefaultMediaPlayer(IMediaReader mr, boolean liveStream) {
         this.mr = new MediaReaderAdapter(mr);
         this.liveStream = liveStream;
-        
+
         aDecoders = new IDecoder[mr.getAudioStreamCount()];
         vDecoders = new IDecoder[mr.getVideoStreamCount()];
-        
+
         playerThreads = null;
         streamPlayers = null;
         stopPosition = 0;
         startTime = 0;
     }
-    
+
     @Override
     public IMediaReader getMediaReader() {
         return mr;
@@ -154,7 +137,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         } else {
             mr.removeVideoPacketConsumer(videoStreamIndex, getVideoStreamDecoder(videoStreamIndex));
             mr.setVideoStreamBufferingEnabled(videoStreamIndex, false);
-            stopStreamPlayback(mr.getVideoStream(videoStreamIndex).getIndex());
+            stopStreamPlayback(mr.getVideoStream(videoStreamIndex).index());
         }
     }
 
@@ -167,10 +150,10 @@ public class DefaultMediaPlayer implements IMediaPlayer {
     public IDecoder getVideoStreamDecoder(int videoStreamIndex) throws LibavException {
         if (vDecoders[videoStreamIndex] == null)
             vDecoders[videoStreamIndex] = new SynchronizedVideoFrameDecoder(mr.getVideoStream(videoStreamIndex));
-        
+
         return vDecoders[videoStreamIndex];
     }
-    
+
     @Override
     public synchronized void setAudioStreamDecodingEnabled(int audioStreamIndex, boolean enabled) throws LibavException {
         if (enabled) {
@@ -180,7 +163,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         } else {
             mr.removeAudioPacketConsumer(audioStreamIndex, getAudioStreamDecoder(audioStreamIndex));
             mr.setAudioStreamBufferingEnabled(audioStreamIndex, false);
-            stopStreamPlayback(mr.getAudioStream(audioStreamIndex).getIndex());
+            stopStreamPlayback(mr.getAudioStream(audioStreamIndex).index());
         }
     }
 
@@ -193,42 +176,42 @@ public class DefaultMediaPlayer implements IMediaPlayer {
     public IDecoder getAudioStreamDecoder(int audioStreamIndex) throws LibavException {
         if (aDecoders[audioStreamIndex] == null)
             aDecoders[audioStreamIndex] = new SynchronizedAudioFrameDecoder(mr.getAudioStream(audioStreamIndex));
-        
+
         return aDecoders[audioStreamIndex];
     }
-    
+
     private synchronized void startVideoStreamPlayback(int videoStreamIndex) {
-        IStreamWrapper sw = mr.getVideoStream(videoStreamIndex);
-        int si = sw.getIndex();
-        
+        AVStream sw = mr.getVideoStream(videoStreamIndex);
+        int si = sw.index();
+
         if (streamPlayers == null || streamPlayers[si] != null)
             return;
-        
+
         if (liveStream)
             stopPosition = System.currentTimeMillis() - startTime - 500;
-        
+
         streamPlayers[si] = new ThreadedVideoStreamPlayer(mr, videoStreamIndex, stopPosition);
         playerThreads[si] = new Thread(streamPlayers[si], "StreamPlayer");
         playerThreads[si].setDaemon(true);
         playerThreads[si].start();
     }
-    
+
     private synchronized void startAudioStreamPlayback(int audioStreamIndex) {
-        IStreamWrapper sw = mr.getAudioStream(audioStreamIndex);
-        int si = sw.getIndex();
-        
+        AVStream sw = mr.getAudioStream(audioStreamIndex);
+        int si = sw.index();
+
         if (streamPlayers == null || streamPlayers[si] != null)
             return;
-        
+
         if (liveStream)
             stopPosition = System.currentTimeMillis() - startTime - 500;
-        
+
         streamPlayers[si] = new ThreadedAudioStreamPlayer(mr, audioStreamIndex, stopPosition);
         playerThreads[si] = new Thread(streamPlayers[si], "StreamPlayer");
         playerThreads[si].setDaemon(true);
         playerThreads[si].start();
     }
-    
+
     private synchronized void stopStreamPlayback(int streamIndex) {
         streamPlayers[streamIndex].stop();
         try {
@@ -244,38 +227,38 @@ public class DefaultMediaPlayer implements IMediaPlayer {
     public synchronized void play() throws LibavException {
         if (streamPlayers != null)
             return;
-        
+
         streamPlayers = new ThreadedStreamPlayer[mr.getStreamCount()];
         playerThreads = new Thread[streamPlayers.length];
-        
+
         if (startTime == 0 || !liveStream)
             startTime = System.currentTimeMillis();
         if (liveStream) {
             stopPosition = System.currentTimeMillis() - startTime - 500; // give it a time to work with network delay
             mr.dropAllBuffers();
         }
-        
-        IStreamWrapper sw;
+
+        AVStream sw;
         for (int i = 0; i < mr.getVideoStreamCount(); i++) {
             if (!isVideoStreamDecodingEnabled(i))
                 continue;
             mr.setVideoStreamBufferingEnabled(i, true);
             sw = mr.getVideoStream(i);
-            streamPlayers[sw.getIndex()] = new ThreadedVideoStreamPlayer(mr, i, stopPosition);
-            playerThreads[sw.getIndex()] = new Thread(streamPlayers[sw.getIndex()], "StreamPlayer");
-            playerThreads[sw.getIndex()].setDaemon(true);
+            streamPlayers[sw.index()] = new ThreadedVideoStreamPlayer(mr, i, stopPosition);
+            playerThreads[sw.index()] = new Thread(streamPlayers[sw.index()], "StreamPlayer");
+            playerThreads[sw.index()].setDaemon(true);
         }
-        
+
         for (int i = 0; i < mr.getAudioStreamCount(); i++) {
             if (!isAudioStreamDecodingEnabled(i))
                 continue;
             mr.setAudioStreamBufferingEnabled(i, true);
             sw = mr.getAudioStream(i);
-            streamPlayers[sw.getIndex()] = new ThreadedAudioStreamPlayer(mr, i, stopPosition);
-            playerThreads[sw.getIndex()] = new Thread(streamPlayers[sw.getIndex()], "StreamPlayer");
-            playerThreads[sw.getIndex()].setDaemon(true);
+            streamPlayers[sw.index()] = new ThreadedAudioStreamPlayer(mr, i, stopPosition);
+            playerThreads[sw.index()] = new Thread(streamPlayers[sw.index()], "StreamPlayer");
+            playerThreads[sw.index()].setDaemon(true);
         }
-        
+
         for (Thread playerThread : playerThreads) {
             if (playerThread != null)
                 playerThread.start();
@@ -286,20 +269,20 @@ public class DefaultMediaPlayer implements IMediaPlayer {
     public synchronized void stop() {
         if (streamPlayers == null)
             return;
-        
+
         for (ThreadedStreamPlayer sp : streamPlayers) {
             if (sp != null)
                 sp.stop();
         }
-        
+
         try {
             join();
         } catch (InterruptedException ex) {
             Logger.getLogger(DefaultMediaPlayer.class.getName()).log(Level.WARNING, "interrupted while waiting for playback to stop", ex);
         }
-        
+
         stopPosition += System.currentTimeMillis() - startTime;
-        
+
         streamPlayers = null;
     }
 
@@ -308,7 +291,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         Thread[] pts = playerThreads;
         if (pts == null)
             return;
-        
+
         for (Thread pt : pts) {
             if (pt != null)
                 pt.join();
@@ -318,37 +301,37 @@ public class DefaultMediaPlayer implements IMediaPlayer {
     @Override
     public synchronized void close() throws LibavException {
         stop();
-        
+
         for (IDecoder afd : aDecoders) {
             if (afd != null)
                 afd.close();
         }
-        
+
         for (IDecoder vfd : vDecoders) {
             if (vfd != null)
                 vfd.close();
         }
-        
+
         mr.close();
     }
-    
+
     private static boolean isUrlLiveStream(String url) {
         url = url.toLowerCase();
         if (url.startsWith("rtp:"))
             return true;
         if (url.startsWith("rtsp:"))
             return true;
-        
+
         return url.endsWith(".sdp");
     }
-    
+
     private class ThreadedVideoStreamPlayer extends ThreadedStreamPlayer {
         private final long startPoint;
         private final int videoStreamIndex;
-        
+
         public ThreadedVideoStreamPlayer(IMediaReader mr, int videoStreamIndex, long startPoint) {
-            super(mr, mr.getVideoStream(videoStreamIndex).getIndex());
-            
+            super(mr, mr.getVideoStream(videoStreamIndex).index());
+
             this.videoStreamIndex = videoStreamIndex;
             this.startPoint = startPoint;
         }
@@ -356,7 +339,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         @Override
         public void run() {
             IDecoder decoder = null;
-            
+
             try {
                 decoder = getVideoStreamDecoder(videoStreamIndex);
                 if (decoder instanceof SynchronizedVideoFrameDecoder)
@@ -364,9 +347,9 @@ public class DefaultMediaPlayer implements IMediaPlayer {
             } catch (LibavException ex) {
                 Logger.getLogger(DefaultMediaPlayer.class.getName()).log(Level.SEVERE, "unable to get video frame decoder", ex);
             }
-            
+
             super.run();
-            
+
             try {
                 if (decoder != null)
                     decoder.flush();
@@ -375,14 +358,14 @@ public class DefaultMediaPlayer implements IMediaPlayer {
             }
         }
     }
-    
+
     private class ThreadedAudioStreamPlayer extends ThreadedStreamPlayer {
         private final long startPoint;
         private final int audioStreamIndex;
-        
+
         public ThreadedAudioStreamPlayer(IMediaReader mr, int audioStreamIndex, long startPoint) {
-            super(mr, mr.getAudioStream(audioStreamIndex).getIndex());
-            
+            super(mr, mr.getAudioStream(audioStreamIndex).index());
+
             this.audioStreamIndex = audioStreamIndex;
             this.startPoint = startPoint;
         }
@@ -390,7 +373,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         @Override
         public void run() {
             IDecoder decoder = null;
-            
+
             try {
                 decoder = getAudioStreamDecoder(audioStreamIndex);
                 if (decoder instanceof SynchronizedAudioFrameDecoder)
@@ -398,9 +381,9 @@ public class DefaultMediaPlayer implements IMediaPlayer {
             } catch (LibavException ex) {
                 Logger.getLogger(DefaultMediaPlayer.class.getName()).log(Level.SEVERE, "unable to get audio frame decoder", ex);
             }
-            
+
             super.run();
-            
+
             try {
                 if (decoder != null)
                     decoder.flush();
@@ -409,7 +392,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
             }
         }
     }
-    
+
     private static class ThreadedStreamPlayer implements Runnable {
         protected IMediaReader mr;
         private final int streamIndex;
@@ -418,10 +401,10 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         public ThreadedStreamPlayer(IMediaReader mr, int streamIndex) {
             this.mr = mr;
             this.streamIndex = streamIndex;
-            
+
             stop = false;
         }
-        
+
         @Override
         public void run() {
             while (!stop) {
@@ -438,23 +421,23 @@ public class DefaultMediaPlayer implements IMediaPlayer {
             stop = true;
         }
     }
-    
+
     private static class SynchronizedVideoFrameDecoder extends VideoFrameDecoder {
         private long startPoint;
-        
-        public SynchronizedVideoFrameDecoder(IStreamWrapper stream) throws LibavException {
+
+        public SynchronizedVideoFrameDecoder(AVStream stream) throws LibavException {
             super(stream);
-            
+
             startPoint = 0;
         }
-        
+
         public void setStartPoint(long startPoint) {
             this.startPoint = startPoint;
         }
 
         @Override
-        protected void sendFrame(IFrameWrapper frame) throws LibavException {
-            long tmp = frame.getPts() + startPoint - System.currentTimeMillis();
+        protected void sendFrame(AVFrame frame) throws LibavException {
+            long tmp = frame.pts() + startPoint - System.currentTimeMillis();
             //System.out.printf("VF: pts = %d, tmp = %d (expected_pts = %d, start_point = %d)\n", frame.getPts(), tmp, System.currentTimeMillis() - startPoint, startPoint);
             if (tmp > 0) {
                 try {
@@ -464,27 +447,27 @@ public class DefaultMediaPlayer implements IMediaPlayer {
                 }
             } else if (tmp < -10) // drop frame if it is too late
                 return;
-            
+
             super.sendFrame(frame);
         }
     }
-    
+
     private static class SynchronizedAudioFrameDecoder extends AudioFrameDecoder {
         private long startPoint;
-        
-        public SynchronizedAudioFrameDecoder(IStreamWrapper stream) throws LibavException {
+
+        public SynchronizedAudioFrameDecoder(AVStream stream) throws LibavException {
             super(stream);
-            
+
             startPoint = 0;
         }
-        
+
         public void setStartPoint(long startPoint) {
             this.startPoint = startPoint;
         }
 
         @Override
-        protected void sendFrame(IFrameWrapper frame) throws LibavException {
-            long tmp = frame.getPts() + startPoint - System.currentTimeMillis() - 500;
+        protected void sendFrame(AVFrame frame) throws LibavException {
+            long tmp = frame.pts() + startPoint - System.currentTimeMillis() - 500;
             //System.out.printf("AF: pts = %d, tmp = %d (expected_pts = %d, start_point = %d)\n", frame.getPts(), tmp, System.currentTimeMillis() - startPoint, startPoint);
             if (tmp > 0) {
                 try {
@@ -494,20 +477,20 @@ public class DefaultMediaPlayer implements IMediaPlayer {
                 }
             } else if (tmp < -100) // drop frame if it is too late
                 return;
-            
+
             super.sendFrame(frame);
         }
     }
-    
+
     private class MediaReaderAdapter implements IMediaReader {
         private final IMediaReader mr;
 
         public MediaReaderAdapter(IMediaReader mr) {
             this.mr = mr;
         }
-        
+
         @Override
-        public IFormatContextWrapper getFormatContext() {
+        public AVFormatContext getFormatContext() {
             return mr.getFormatContext();
         }
 
@@ -532,7 +515,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         }
 
         @Override
-        public IStreamWrapper getStream(int streamIndex) {
+        public AVStream getStream(int streamIndex) {
             return mr.getStream(streamIndex);
         }
 
@@ -542,7 +525,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         }
 
         @Override
-        public IStreamWrapper getVideoStream(int videoStreamIndex) {
+        public AVStream getVideoStream(int videoStreamIndex) {
             return mr.getVideoStream(videoStreamIndex);
         }
 
@@ -567,7 +550,7 @@ public class DefaultMediaPlayer implements IMediaPlayer {
         }
 
         @Override
-        public IStreamWrapper getAudioStream(int audioStremIndex) {
+        public AVStream getAudioStream(int audioStremIndex) {
             return mr.getAudioStream(audioStremIndex);
         }
 
@@ -696,5 +679,5 @@ public class DefaultMediaPlayer implements IMediaPlayer {
             return mr.isClosed();
         }
     }
-    
+
 }

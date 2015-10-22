@@ -30,6 +30,7 @@ import com.mutar.libav.service.LibraryManager;
  */
 public class LibavException extends Exception {
 
+    private static final long serialVersionUID = -7026667722399628992L;
     private static final AvutilLibrary lib = LibraryManager.getInstance().getAvUtil();
 
     public LibavException(int errorCode, Throwable thrwbl) {

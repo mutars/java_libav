@@ -17,6 +17,7 @@
  */
 package com.mutar.libav.api.util;
 
+import org.bridj.IntValuedEnum;
 import org.bridj.Pointer;
 
 import com.mutar.libav.api.exception.LibavException;
@@ -49,19 +50,19 @@ public class SwscaleLibraryUtils {
         return scaleLib.sws_scale(scaleContextPointer, src.data(), src.linesize(), srcSliceY, srcSliceHeight, dst.data(), dst.linesize());
     }
 
-    public static Pointer<SwscaleLibrary.SwsContext > createContext(int srcWidth, int srcHeight, AVPixelFormat srcFormat, int dstWidth, int dstHeight, AVPixelFormat dstFormat, int flags) throws LibavException {
+    public static Pointer<SwscaleLibrary.SwsContext > createContext(int srcWidth, int srcHeight, IntValuedEnum<AVPixelFormat> srcFormat, int dstWidth, int dstHeight, IntValuedEnum<AVPixelFormat> dstFormat, int flags) throws LibavException {
         return allocateContext(srcWidth, srcHeight, srcFormat, dstWidth, dstHeight, dstFormat, flags, null, null, null);
     }
 
-    public static Pointer<SwscaleLibrary.SwsContext > createContext(int srcWidth, int srcHeight, AVPixelFormat srcFormat, int dstWidth, int dstHeight, AVPixelFormat dstFormat, int flags, Pointer<SwsFilter > srcFilter, Pointer<SwsFilter > dstFilter) throws LibavException {
+    public static Pointer<SwscaleLibrary.SwsContext > createContext(int srcWidth, int srcHeight, IntValuedEnum<AVPixelFormat> srcFormat, int dstWidth, int dstHeight, IntValuedEnum<AVPixelFormat> dstFormat, int flags, Pointer<SwsFilter > srcFilter, Pointer<SwsFilter > dstFilter) throws LibavException {
         return allocateContext(srcWidth, srcHeight, srcFormat, dstWidth, dstHeight, dstFormat, flags, srcFilter, dstFilter, null);
     }
 
-    public static Pointer<SwscaleLibrary.SwsContext > createContext(int srcWidth, int srcHeight, AVPixelFormat srcFormat, int dstWidth, int dstHeight, AVPixelFormat dstFormat, int flags, Pointer<SwsFilter > srcFilter, Pointer<SwsFilter > dstFilter, Pointer<Double > param) throws LibavException {
+    public static Pointer<SwscaleLibrary.SwsContext > createContext(int srcWidth, int srcHeight, IntValuedEnum<AVPixelFormat> srcFormat, int dstWidth, int dstHeight, IntValuedEnum<AVPixelFormat> dstFormat, int flags, Pointer<SwsFilter > srcFilter, Pointer<SwsFilter > dstFilter, Pointer<Double > param) throws LibavException {
         return allocateContext(srcWidth, srcHeight, srcFormat, dstWidth, dstHeight, dstFormat, flags, srcFilter, dstFilter, param);
     }
 
-    private static Pointer<SwscaleLibrary.SwsContext > allocateContext(int srcWidth, int srcHeight, AVPixelFormat srcFormat, int dstWidth, int dstHeight, AVPixelFormat dstFormat, int flags, Pointer<SwsFilter > srcFilter, Pointer<SwsFilter > dstFilter, Pointer<Double > param) throws LibavException {
+    private static Pointer<SwscaleLibrary.SwsContext > allocateContext(int srcWidth, int srcHeight, IntValuedEnum<AVPixelFormat> srcFormat, int dstWidth, int dstHeight, IntValuedEnum<AVPixelFormat> dstFormat, int flags, Pointer<SwsFilter > srcFilter, Pointer<SwsFilter > dstFilter, Pointer<Double > param) throws LibavException {
         Pointer<SwscaleLibrary.SwsContext > result = scaleLib.sws_getCachedContext(null, srcWidth, srcHeight, srcFormat, dstWidth, dstHeight, dstFormat, flags, srcFilter, dstFilter, param);
         if (result == null)
             throw new LibavException("unable to create scale context");

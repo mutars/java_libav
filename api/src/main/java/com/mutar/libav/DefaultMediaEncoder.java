@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2012 Ondrej Perutka
  *
- * This program is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation, either 
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation, either
  * version 3 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
@@ -11,8 +11,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public 
- * License along with this library. If not, see 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mutar.libav;
@@ -21,11 +21,17 @@ import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bridj.IntValuedEnum;
+
 import com.mutar.libav.api.IEncoder;
 import com.mutar.libav.api.IEncoderFactory;
 import com.mutar.libav.api.IMediaEncoder;
 import com.mutar.libav.api.IMediaWriter;
 import com.mutar.libav.api.exception.LibavException;
+import com.mutar.libav.api.util.AVCodecLibraryUtil;
+import com.mutar.libav.audio.AudioFrameEncoder;
+import com.mutar.libav.bridge.avcodec.AVCodec;
+import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
 import com.mutar.libav.bridge.avformat.AVFormatContext;
@@ -35,36 +41,36 @@ import com.mutar.libav.video.VideoFrameEncoder;
 
 /**
  * Default implementation of the media encoder interface.
- * 
+ *
  * @author Ondrej Perutka
  */
 public class DefaultMediaEncoder implements IMediaEncoder {
 
     private IMediaWriter mw;
-    
+
     private IEncoderFactory aef;
     private IEncoderFactory vef;
-    
+
     private Map<Integer, IEncoder> aEncoders;
     private Map<Integer, IEncoder> vEncoders;
 
     /**
      * Create a new media encoder using the default media writer.
-     * 
+     *
      * @param url a media URL
-     * @param outputFormatName 
+     * @param outputFormatName
      * @throws LibavException if an error occurs
      */
     public DefaultMediaEncoder(String url, String outputFormatName) throws LibavException {
         this(new DefaultMediaWriter(url, outputFormatName));
     }
-    
+
     protected DefaultMediaEncoder(IMediaWriter mw) {
         this.mw = new MediaWriterAdapter(mw);
-        
+
         aef = new DefaultAudioEncoderFactory();
         vef = new DefaultVideoEncoderFactory();
-        
+
         aEncoders = new HashMap<Integer, IEncoder>();
         vEncoders = new HashMap<Integer, IEncoder>();
     }
@@ -101,7 +107,7 @@ public class DefaultMediaEncoder implements IMediaEncoder {
             enc.addPacketConsumer(mw);
             aEncoders.put(audioStreamIndex, enc);
         }
-        
+
         return aEncoders.get(audioStreamIndex);
     }
 
@@ -112,7 +118,7 @@ public class DefaultMediaEncoder implements IMediaEncoder {
             enc.addPacketConsumer(mw);
             vEncoders.put(videoStreamIndex, enc);
         }
-        
+
         return vEncoders.get(videoStreamIndex);
     }
 
@@ -122,7 +128,7 @@ public class DefaultMediaEncoder implements IMediaEncoder {
             enc.close();
         for (IEncoder enc : vEncoders.values())
             enc.close();
-        
+
         mw.close();
         aEncoders.clear();
         vEncoders.clear();
@@ -137,27 +143,27 @@ public class DefaultMediaEncoder implements IMediaEncoder {
     public synchronized void flush() throws LibavException {
         if (isClosed())
             return;
-        
+
         for (IEncoder enc : aEncoders.values())
             enc.flush();
         for (IEncoder enc : vEncoders.values())
             enc.flush();
     }
-    
+
     private class DefaultAudioEncoderFactory implements IEncoderFactory {
         @Override
         public IEncoder createEncoder(AVStream stream) throws LibavException {
             return new AudioFrameEncoder(stream);
         }
     }
-    
+
     private class DefaultVideoEncoderFactory implements IEncoderFactory {
         @Override
         public IEncoder createEncoder(AVStream stream) throws LibavException {
             return new VideoFrameEncoder(mw.getFormatContext(), stream);
         }
     }
-    
+
     private class MediaWriterAdapter implements IMediaWriter {
         private final IMediaWriter mw;
 
@@ -196,7 +202,7 @@ public class DefaultMediaEncoder implements IMediaEncoder {
         }
 
         @Override
-        public int addVideoStream(AVCodecID codecId, int width, int height) throws LibavException {
+        public int addVideoStream(IntValuedEnum<AVCodecID> codecId, int width, int height) throws LibavException {
             return mw.addVideoStream(codecId, width, height);
         }
 
@@ -211,7 +217,7 @@ public class DefaultMediaEncoder implements IMediaEncoder {
         }
 
         @Override
-        public int addAudioStream(AVCodecID codecId, int sampleRate, AVSampleFormat sampleFormat, int channelCount) throws LibavException {
+        public int addAudioStream(IntValuedEnum<AVCodecID> codecId, int sampleRate, IntValuedEnum<AVSampleFormat> sampleFormat, int channelCount) throws LibavException {
             return mw.addAudioStream(codecId, sampleRate, sampleFormat, channelCount);
         }
 
@@ -222,19 +228,17 @@ public class DefaultMediaEncoder implements IMediaEncoder {
 
         @Override
         public void writeHeader() throws LibavException {
-            CodecWrapperFactory cwf = CodecWrapperFactory.getInstance();
-            IStreamWrapper stream;
-            ICodecContextWrapper cc;
-            ICodecWrapper codec;
-            
+            AVStream stream;
+            AVCodecContext cc;
+            AVCodec codec;
+
             for (int i = 0; i < mw.getStreamCount(); i++) {
                 stream = mw.getStream(i);
-                cc = stream.getCodecContext();
-                cc.clearWrapperCache();
-                codec = cwf.findEncoder(cc.getCodecId());
-                cc.open(codec);
+                cc = stream.codec().get();
+                codec = AVCodecLibraryUtil.findEncoder(cc.codec_id());
+                AVCodecLibraryUtil.open(cc, codec);
             }
-            
+
             mw.writeHeader();
         }
 
@@ -268,5 +272,5 @@ public class DefaultMediaEncoder implements IMediaEncoder {
             mw.processPacket(producer, packet);
         }
     }
-    
+
 }

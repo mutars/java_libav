@@ -29,6 +29,7 @@ import com.mutar.libav.service.LibraryManager;
  */
 public class LibavRuntimeException extends RuntimeException {
 
+    private static final long serialVersionUID = 3219815914274719125L;
     private static final AvutilLibrary lib = LibraryManager.getInstance().getAvUtil();
 
     public LibavRuntimeException(int errorCode, Throwable thrwbl) {

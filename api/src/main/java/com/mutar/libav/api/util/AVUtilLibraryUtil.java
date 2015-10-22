@@ -1,5 +1,7 @@
 package com.mutar.libav.api.util;
 
+import java.nio.charset.Charset;
+
 import org.bridj.IntValuedEnum;
 import org.bridj.NativeObject;
 import org.bridj.Pointer;
@@ -15,8 +17,14 @@ import com.mutar.libav.service.LibraryManager;
 public final class AVUtilLibraryUtil {
 
     private static final AvutilLibrary utilLib;
+    //private static NativeLibrary lib ;
     static {
         utilLib  = LibraryManager.getInstance().getAvUtil();
+        /*try {
+            lib = BridJ.getNativeLibrary(AvutilLibrary.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
     }
 
     public static AVFrame allocateFrame() throws LibavException {
@@ -27,7 +35,7 @@ public final class AVUtilLibraryUtil {
         return new AVFrame(ptr);
     }
 
-    public static AVFrame allocatePicture(AVPixelFormat pixelFormat, int width, int height) throws LibavException {
+    public static AVFrame allocatePicture(IntValuedEnum<AVPixelFormat> pixelFormat, int width, int height) throws LibavException {
         AVFrame result = allocateFrame();
         result.width(width);
         result.height(height);
@@ -41,13 +49,13 @@ public final class AVUtilLibraryUtil {
 
         return result;
     }
-    
+
     public static <T extends NativeObject> void av_free(T obj) {
-    	av_free(getPointer(obj));
+        av_free(getPointer(obj));
     }
-    
-    public static <T extends NativeObject> void av_free(Pointer<T> ptr) {
-    	utilLib.av_free(ptr);
+
+    public static <T> void av_free(Pointer<T> ptr) {
+        utilLib.av_free(ptr);
     }
 
     public static void free(AVFrame frame) {
@@ -101,18 +109,44 @@ public final class AVUtilLibraryUtil {
             default: return false;
         }
     }
-    
+
     public static long getDefaultChannelLayout(int nb_channels) {
-    	return utilLib.av_get_default_channel_layout(nb_channels);
+        return utilLib.av_get_default_channel_layout(nb_channels);
+    }
+
+    public static int getBitsPerSample(IntValuedEnum<AvutilLibrary.AVSampleFormat > sample_fmt) {
+        return utilLib.av_get_bytes_per_sample(sample_fmt) * 8;
     }
 
     public static boolean isPlanar(IntValuedEnum<AVSampleFormat > sample_fmt) {
         return utilLib.av_sample_fmt_is_planar(sample_fmt) == 1;
     }
 
+    public static Pointer<Byte> malloc(int size) {
+        Pointer<Byte> ptr = utilLib.av_malloc(size).as(Byte.class);
+        if (ptr == null)
+            throw new OutOfMemoryError("not enough memory for the audio frame encoder");
+
+        return ptr;
+    }
+
+    public static long getChannelLayout(String name) {
+        Pointer<?> tmp = Pointer.pointerToString(name, Pointer.StringType.C, Charset.forName("UTF-8"));
+        return utilLib.av_get_channel_layout(tmp.as(Byte.class));
+    }
+
+    public static int getChannelCount(long channelLayout) {
+        return utilLib.av_get_channel_layout_nb_channels(channelLayout);
+    }
+
     private static <T extends NativeObject> Pointer<T> getPointer(T obj) {
         return Pointer.getPointer(obj);
     }
+
+    //XXX Potential Performance issue
+    /*public static boolean functionExists(String functionName) {
+        return lib.getSymbol(functionName) != null;
+    }*/
 
 
 }

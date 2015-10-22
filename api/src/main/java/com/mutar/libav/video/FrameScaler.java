@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.bridj.IntValuedEnum;
 import org.bridj.Pointer;
 
 import com.mutar.libav.api.data.IFrameConsumer;
@@ -36,11 +37,11 @@ public class FrameScaler implements IFrameConsumer, IFrameProducer {
 
     private int srcWidth;
     private int srcHeight;
-    private AVPixelFormat srcFormat;
+    private IntValuedEnum<AVPixelFormat> srcFormat;
 
     private int dstWidth;
     private int dstHeight;
-    private AVPixelFormat dstFormat;
+    private IntValuedEnum<AVPixelFormat> dstFormat;
 
     private Pointer<SwscaleLibrary.SwsContext> scaleContextPointer;
     private int scalingAlg;
@@ -60,7 +61,7 @@ public class FrameScaler implements IFrameConsumer, IFrameProducer {
      * @param dstPixelFormat a pixel format of produced images
      * @throws LibavException if an error occurs
      */
-    public FrameScaler(int srcWidth, int srcHeight, AVPixelFormat srcPixelFormat, int dstWidth, int dstHeight, AVPixelFormat dstPixelFormat) throws LibavException {
+    public FrameScaler(int srcWidth, int srcHeight, IntValuedEnum<AVPixelFormat> srcPixelFormat, int dstWidth, int dstHeight, IntValuedEnum<AVPixelFormat> dstPixelFormat) throws LibavException {
         this.srcWidth = srcWidth;
         this.srcHeight = srcHeight;
         this.srcFormat = srcPixelFormat;
@@ -123,7 +124,7 @@ public class FrameScaler implements IFrameConsumer, IFrameProducer {
      *
      * @return expected pixel format of source images
      */
-    public AVPixelFormat getSourceImagePixelFormat() {
+    public IntValuedEnum<AVPixelFormat> getSourceImagePixelFormat() {
         return srcFormat;
     }
 
@@ -167,7 +168,7 @@ public class FrameScaler implements IFrameConsumer, IFrameProducer {
      *
      * @return pixel format of produced images
      */
-    public AVPixelFormat getDestinationPixelFormat() {
+    public IntValuedEnum<AVPixelFormat> getDestinationPixelFormat() {
         return dstFormat;
     }
 

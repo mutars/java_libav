@@ -34,8 +34,8 @@ import com.mutar.libav.video.FrameScaler;
 public class TranscodeSample {
 
     public static void main(String[] args) {
-        String srcUrl = "/home/sepe/test1.mp4"; // some source multimedia file/stream
-        String dstUrl = "/home/sepe/bar.mkv"; // destination file name
+        String srcUrl = "/home/sergey/Videos/test.mp4"; // some source multimedia file/stream
+        String dstUrl = "/home/sergey/bar.mkv"; // destination file name
         AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_MPEG4; // output video codec
         AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_MP2; // output audio codec
 
