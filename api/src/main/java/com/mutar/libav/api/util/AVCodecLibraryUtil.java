@@ -11,6 +11,7 @@ import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
 import com.mutar.libav.bridge.avutil.AVFrame;
+import com.mutar.libav.bridge.avutil.AvutilLibrary.AVPixelFormat;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVSampleFormat;
 import com.mutar.libav.service.LibraryManager;
 
@@ -162,7 +163,7 @@ public final class AVCodecLibraryUtil {
     public static void fillAudioFrame(AVFrame frame, int sampleCount, int channelCount, IntValuedEnum<AVSampleFormat > sampleFormat, Pointer<Byte> buffer, int bufferSize, int bufferSampleCapacity) throws LibavException {
         frame.nb_samples(bufferSampleCapacity);
         int res = avCodecLib.avcodec_fill_audio_frame(getPointer(frame), channelCount, sampleFormat, buffer, bufferSize, 1);
-        if (res != 0)
+        if (res < 0)
             throw new LibavException(res);
 
         int ls = sampleCount * AVUtilLibraryUtil.getBytesPerSample(sampleFormat);
@@ -184,6 +185,10 @@ public final class AVCodecLibraryUtil {
 
     public static int audioResample(Pointer<AvcodecLibrary.ReSampleContext > s, Pointer<Short > output, Pointer<Short > input, int nb_samples) {
         return avCodecLib.audio_resample(s, output, input, nb_samples);
+    }
+
+    public static IntValuedEnum<AVPixelFormat> avcodecFindBestPixFmtOfList(Pointer<IntValuedEnum<AVPixelFormat > > pix_fmt_list, IntValuedEnum<AVPixelFormat > src_pix_fmt, int has_alpha, Pointer<Integer > loss_ptr) {
+        return avCodecLib.avcodec_find_best_pix_fmt_of_list(pix_fmt_list, src_pix_fmt, has_alpha, loss_ptr);
     }
 
     public static void audioResampleClose(Pointer<AvcodecLibrary.ReSampleContext > s) {

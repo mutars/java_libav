@@ -180,7 +180,7 @@ public class DefaultMediaWriter implements IMediaWriter {
         cc.codec_id(codecId);
         cc.bit_rate(192000);
         cc.sample_rate(sampleRate);
-        cc.sample_fmt(sampleFormat);
+        cc.sample_fmt(AVUtilLibraryUtil.getSupportedFormat(codec.sample_fmts(), sampleFormat));
         cc.channels(channelCount);
         cc.channel_layout(AVUtilLibraryUtil.getDefaultChannelLayout(channelCount));
 

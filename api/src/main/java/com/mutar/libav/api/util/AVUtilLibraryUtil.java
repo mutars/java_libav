@@ -79,33 +79,33 @@ public final class AVUtilLibraryUtil {
     }
 
     public static boolean isSigned(IntValuedEnum<AVSampleFormat > sample_fmt) {
-        switch (sample_fmt.toString()) {
-            case "AV_SAMPLE_FMT_DBL":
-            case "AV_SAMPLE_FMT_FLT":
-            case "AV_SAMPLE_FMT_S16":
-            case "AV_SAMPLE_FMT_S32":
-            case "AV_SAMPLE_FMT_DBLP" :
-            case "AV_SAMPLE_FMT_FLTP":
-            case "AV_SAMPLE_FMT_S16P":
-            case "AV_SAMPLE_FMT_S32P": return true;
+        switch (sample_fmt.iterator().next()) {
+            case AV_SAMPLE_FMT_DBL:
+            case AV_SAMPLE_FMT_FLT:
+            case AV_SAMPLE_FMT_S16:
+            case AV_SAMPLE_FMT_S32:
+            case AV_SAMPLE_FMT_DBLP :
+            case AV_SAMPLE_FMT_FLTP:
+            case AV_SAMPLE_FMT_S16P:
+            case AV_SAMPLE_FMT_S32P: return true;
             default: return false;
         }
     }
 
     public static boolean isUnsigned(IntValuedEnum<AVSampleFormat > sample_fmt) {
-        switch (sample_fmt.toString()) {
-            case "AV_SAMPLE_FMT_U8":
-            case "AV_SAMPLE_FMT_U8P": return true;
+        switch (sample_fmt.iterator().next()) {
+            case AV_SAMPLE_FMT_U8:
+            case AV_SAMPLE_FMT_U8P: return true;
             default: return false;
         }
     }
 
     public static boolean isReal(IntValuedEnum<AVSampleFormat > sample_fmt) {
-        switch (sample_fmt.toString()) {
-            case "AV_SAMPLE_FMT_DBL":
-            case "AV_SAMPLE_FMT_FLT":
-            case "AV_SAMPLE_FMT_DBLP":
-            case "AV_SAMPLE_FMT_FLTP": return true;
+        switch (sample_fmt.iterator().next()) {
+            case AV_SAMPLE_FMT_DBL:
+            case AV_SAMPLE_FMT_FLT:
+            case AV_SAMPLE_FMT_DBLP:
+            case AV_SAMPLE_FMT_FLTP: return true;
             default: return false;
         }
     }
@@ -141,6 +141,14 @@ public final class AVUtilLibraryUtil {
 
     private static <T extends NativeObject> Pointer<T> getPointer(T obj) {
         return Pointer.getPointer(obj);
+    }
+
+    public  static <E extends Enum<E>> IntValuedEnum<E> getSupportedFormat(Pointer<IntValuedEnum<E>> sample_fmts, IntValuedEnum<E> sample_fmt) {
+        for(int i=0;i<12; i++) {
+            if(sample_fmts.get(i).value() == -1) break;
+            if(sample_fmts.get(i).equals(sample_fmt)) return sample_fmt;
+        }
+        return sample_fmts.get(0);
     }
 
     //XXX Potential Performance issue

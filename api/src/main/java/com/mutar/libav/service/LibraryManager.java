@@ -11,6 +11,7 @@ import com.mutar.libav.bridge.avdevice.AvdeviceLibrary;
 import com.mutar.libav.bridge.avformat.AvformatLibrary;
 import com.mutar.libav.bridge.avresample.AvresampleLibrary;
 import com.mutar.libav.bridge.avutil.AvutilLibrary;
+import com.mutar.libav.bridge.postproc.PostprocLibrary;
 import com.mutar.libav.bridge.swscale.SwscaleLibrary;
 
 /**
@@ -36,6 +37,7 @@ public class LibraryManager {
     private final AvdeviceLibrary avDevice;
     private final SwscaleLibrary swScale;
     private final AvresampleLibrary avResample;
+    private final PostprocLibrary postProc;
 
     private LibraryManager() throws IOException {
         BridJ.addLibraryPath(System.getProperty(PKEY_LIBPATH, DEFAULT_LIBPATH));
@@ -47,13 +49,13 @@ public class LibraryManager {
         addNativeLibraryAliases(SWScaleLibrary.LIB_NAME, SWScaleLibrary.MIN_MAJOR_VERSION, SWScaleLibrary.MAX_MAJOR_VERSION);
         addNativeLibraryAliases(AVResampleLibrary.LIB_NAME, AVResampleLibrary.MIN_MAJOR_VERSION, AVResampleLibrary.MAX_MAJOR_VERSION);*/
 
+        postProc = new PostprocLibrary();
+        avResample = new AvresampleLibrary();
         avUtil = new AvutilLibrary();
         avCodec = new AvcodecLibrary();
         avFormat = new AvformatLibrary();
         swScale = new SwscaleLibrary();
         avDevice = new AvdeviceLibrary();
-        avResample = new AvresampleLibrary();
-
         avFormat.av_register_all();
         avFormat.avformat_network_init();
         avCodec.avcodec_register_all();
@@ -75,6 +77,10 @@ public class LibraryManager {
     } */
 
 
+
+    public PostprocLibrary getPostProc() {
+        return postProc;
+    }
 
     /**
      * Return instance of the LibraryManager.

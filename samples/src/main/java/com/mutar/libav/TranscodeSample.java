@@ -20,6 +20,8 @@ package com.mutar.libav;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bridj.IntValuedEnum;
+
 import com.mutar.libav.api.IDecoder;
 import com.mutar.libav.api.IEncoder;
 import com.mutar.libav.api.IMediaDecoder;
@@ -27,24 +29,26 @@ import com.mutar.libav.api.IMediaEncoder;
 import com.mutar.libav.api.IMediaReader;
 import com.mutar.libav.api.IMediaWriter;
 import com.mutar.libav.api.exception.LibavException;
+import com.mutar.libav.api.util.AVCodecLibraryUtil;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
+import com.mutar.libav.bridge.avutil.AvutilLibrary.AVPixelFormat;
 import com.mutar.libav.video.FrameScaler;
 
 public class TranscodeSample {
 
     public static void main(String[] args) {
-        String srcUrl = "/home/sergey/Videos/test.mp4"; // some source multimedia file/stream
+        String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
         String dstUrl = "/home/sergey/bar.mkv"; // destination file name
         AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_MPEG4; // output video codec
-        AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_MP2; // output audio codec
+        AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_MP3; // output audio codec
 
         IMediaDecoder md = null;
         IMediaEncoder me = null;
         IMediaReader mr;
         IMediaWriter mw;
         FrameScaler scaler = null;
-
+        long startTime = System.currentTimeMillis();
         try {
             md = new DefaultMediaDecoder(srcUrl); // open input file/stream
             me = new DefaultMediaEncoder(dstUrl, null); // open output file
@@ -65,7 +69,9 @@ public class TranscodeSample {
                 si = mw.addVideoStream(videoCodecId, cc1.width(), cc1.height());
                 enc = me.getVideoStreamEncoder(si);
                 cc2 = enc.getCodecContext();
-                cc2.pix_fmt(cc1.pix_fmt());
+                //cc2.pix_fmt(AVPixelFormat.AV_PIX_FMT_YUV420P);
+                IntValuedEnum<AVPixelFormat> bestPixelFormat = AVCodecLibraryUtil.avcodecFindBestPixFmtOfList(cc2.codec().get().pix_fmts(), cc1.pix_fmt(), 0, null);
+                cc2.pix_fmt(bestPixelFormat);
                 scaler = new FrameScaler(cc1.width(), cc1.height(), cc1.pix_fmt(), cc2.width(), cc2.height(), cc2.pix_fmt());
                 scaler.addFrameConsumer(enc);
                 dec.addFrameConsumer(scaler);
@@ -107,6 +113,8 @@ public class TranscodeSample {
                 Logger.getLogger(TranscodeSample.class.getName()).log(Level.SEVERE, "cannot close that", ex);
             }
         }
+        System.out.println("total encoding time = " + (System.currentTimeMillis() - startTime)/1000);
     }
+
 
 }
