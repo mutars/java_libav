@@ -8,6 +8,7 @@ import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.bridge.avcodec.AVCodec;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AVPacket;
+import com.mutar.libav.bridge.avcodec.AVVDPAUContext;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
 import com.mutar.libav.bridge.avutil.AVFrame;
@@ -37,6 +38,14 @@ public final class AVCodecLibraryUtil {
         int result = avCodecLib.avcodec_open2(getPointer(avctx), getPointer(codec), null);
         if(result < 0)
             throw new LibavException(result);
+    }
+
+    public static void initHWAccel(AVCodecContext avctx) throws LibavException {
+
+        AVVDPAUContext result = avCodecLib.av_vdpau_alloc_context().get();
+        System.out.println("here");
+        /*if(result < 0)
+            throw new LibavException(result);*/
     }
 
     public static void  alloc(AVPacket avp) {

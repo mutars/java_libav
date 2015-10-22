@@ -70,6 +70,7 @@ public class VideoFrameDecoder implements IDecoder {
             throw new IllegalArgumentException("not a video stream");
 
         AVCodecLibraryUtil.open(cc, AVCodecLibraryUtil.findDecoder(cc.codec_id()));
+        AVCodecLibraryUtil.initHWAccel(cc);
 
         sTimeBase = AVRationalUtils.mul(stream.time_base(), 1000L);
         pts = 0;
@@ -150,9 +151,9 @@ public class VideoFrameDecoder implements IDecoder {
 
     private AVFrame transformPts(AVFrame frame) {
         //System.out.printf("decoded frame: pts = %d, packet_pts = %d, packet_dts = %d, sTimeBase = %s\n", frame.getPts(), frame.getPacketPts(), frame.getPacketDts(), sTimeBase.toString());
-		if (frame.pkt_dts() != AvutilLibrary.AV_NOPTS_VALUE) {
+        if (frame.pkt_dts() != AvutilLibrary.AV_NOPTS_VALUE) {
             frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(sTimeBase, frame.pkt_dts())));
-		} else {
+        } else {
             frame.pts(pts);
             pts += frameDuration;
         }
