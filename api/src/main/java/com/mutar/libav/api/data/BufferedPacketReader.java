@@ -19,6 +19,7 @@ package com.mutar.libav.api.data;
 
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.mutar.libav.api.data.PacketPool.PooledPacket;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
 import com.mutar.libav.api.util.AVFormatLibraryUtil;
 import com.mutar.libav.api.util.Buffer;
@@ -36,7 +37,7 @@ public class BufferedPacketReader {
     private final PacketPool packetPool;
     private AVPacket packet;
 
-    private final Buffer<AVPacket> buffer;
+    private final Buffer<PooledPacket> buffer;
     private boolean eof;
 
     private ReaderThread readerThread;
@@ -52,9 +53,9 @@ public class BufferedPacketReader {
     public BufferedPacketReader(AVFormatContext formatContext, int bufferSize) {
         this.formatContext = formatContext;
         packetPool = new PacketPool();
-        packet = packetPool.getEmptyPacket();
+        packet = packetPool.getEmptyPacket().getDelegate();
 
-        buffer = new Buffer<AVPacket>(bufferSize);
+        buffer = new Buffer<PooledPacket>(bufferSize);
         eof = false;
 
         readerThread = null;
@@ -100,12 +101,12 @@ public class BufferedPacketReader {
             throw new RuntimeException(ex);
         }
 
-        AVPacket pw;
+        PooledPacket pw;
         synchronized (buffer) {
             while (buffer.getItemCount() > 0) {
                 pw = buffer.get();
                 if (pw != null)
-                    AVCodecLibraryUtil.free(pw);
+                    AVCodecLibraryUtil.free(pw.getDelegate());
             }
         }
 
@@ -151,8 +152,8 @@ public class BufferedPacketReader {
      *
      * @return packet wrapper or null in case of EOF
      */
-    public AVPacket nextPacket() {
-        AVPacket pw;
+    public PooledPacket nextPacket() {
+        PooledPacket pw;
         try {
             lock.lockInterruptibly();
         } catch (InterruptedException ex) {
@@ -179,7 +180,7 @@ public class BufferedPacketReader {
         return pw;
     }
 
-    private boolean putPacket(AVPacket pw) {
+    private boolean putPacket(PooledPacket pw) {
         if (pw == null)
             eof = true;
 
@@ -205,7 +206,7 @@ public class BufferedPacketReader {
 
         @Override
         public void run() {
-            AVPacket pw;
+            PooledPacket pw;
             boolean put;
 
             while (!stop) {
@@ -223,7 +224,7 @@ public class BufferedPacketReader {
                 if (pw == null)
                     stop = true;
                 else if (!put)
-                    AVCodecLibraryUtil.free(pw);
+                    pw.free();
             }
         }
     }

@@ -70,7 +70,6 @@ public class VideoFrameDecoder implements IDecoder {
             throw new IllegalArgumentException("not a video stream");
 
         AVCodecLibraryUtil.open(cc, AVCodecLibraryUtil.findDecoder(cc.codec_id()));
-        AVCodecLibraryUtil.initHWAccel(cc);
 
         sTimeBase = AVRationalUtils.mul(stream.time_base(), 1000L);
         pts = 0;

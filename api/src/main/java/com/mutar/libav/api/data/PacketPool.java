@@ -22,7 +22,6 @@ import java.util.Deque;
 
 import org.bridj.Pointer;
 
-import com.mutar.libav.api.bridge.AbstractWrapper;
 import com.mutar.libav.api.exception.LibavRuntimeException;
 import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary;
@@ -59,11 +58,11 @@ public class PacketPool {
      *
      * @return packet wrapper
      */
-    public AVPacket getEmptyPacket() {
+    public PooledPacket getEmptyPacket() {
         PooledPacket result = getPacket();
-        result.init();
+        result.alloc();
 
-        return result.getDelegate();
+        return result;
     }
 
     /**
@@ -72,11 +71,11 @@ public class PacketPool {
      * @param packet a packet to be clonned
      * @return packet clone
      */
-    public AVPacket clonePacket(AVPacket packet) {
+    public PooledPacket clonePacket(AVPacket packet) {
         PooledPacket result = getPacket();
         result.clone(packet);
 
-        return result.getDelegate();
+        return result;
     }
 
     private PooledPacket getPacket() {
@@ -96,13 +95,14 @@ public class PacketPool {
         recycle.add(packet);
     }
 
-    private class PooledPacket extends AbstractWrapper<AVPacket> {
+    public class PooledPacket {
 
         private AvcodecLibrary avcodecLibrary= LibraryManager.getInstance().getAvCodec();
         private int bufferSize;
+        private AVPacket internal;
 
         public PooledPacket(AVPacket internal) {
-            super(internal);
+            this.internal = internal;
             this.bufferSize = internal.size();
         }
 
@@ -113,60 +113,52 @@ public class PacketPool {
         }
 
         public synchronized void dispose() {
-            if (delegate == null)
+            if (internal == null)
                 return;
-            avcodecLibrary.av_free_packet(getPointer());
-            delegate = null;
-        }
-
-
-        public void init() {
-            avcodecLibrary.av_init_packet(getPointer());
-        }
-
-        public void free() {
-            setSize(bufferSize);
-            recycle(this);
+            Pointer<AVPacket> pointer = Pointer.getPointer(internal);
+            avcodecLibrary.av_free_packet(pointer);
+            internal = null;
+            //pointer.release();
         }
 
         public void grow(int growBy) {
-            int result = avcodecLibrary.av_grow_packet(getPointer(), growBy);
+            int result = avcodecLibrary.av_grow_packet(Pointer.getPointer(internal), growBy);
             if (result != 0)
                 throw new LibavRuntimeException(result);
-            bufferSize = delegate.size();
+            bufferSize = internal.size();
         }
 
-        public void shrink(int size) {
-            avcodecLibrary.av_shrink_packet(getPointer(), size);
+        //public void shrink(int size) {
+            //avcodecLibrary.av_shrink_packet(Pointer.getPointer(internal), size);
+        //}
+
+        public int getStreamIndex() {
+            return internal.stream_index();
         }
 
- /*       public int getStreamIndex() {
-            return delegate.stream_index();
-        }
-
-        public void setStreamIndex(int streamIndex) {
+        /*public void setStreamIndex(int streamIndex) {
             delegate.stream_index(streamIndex);
         } */
 
         public int getSize() {
-            return delegate.size();
+            return internal.size();
         }
 
         public void setSize(int size) {
-            delegate.size(size);
+            internal.size(size);
         }
 
         public Pointer<Byte> getData() {
-            return delegate.data();
+            return internal.data();
         }
 
-        public void setData(Pointer<Byte> data) {
-            delegate.data(data);
-        }
+        /*public void setData(Pointer<Byte> data) {
+            internal.data(data);
+        }*/
 
         public PooledPacket alloc() {
-            avcodecLibrary.av_init_packet(getPointer());
-            //clearWrapperCache();
+            avcodecLibrary.av_init_packet(Pointer.getPointer(internal));
+            bufferSize = internal.size();
             return this;
         }
         /*
@@ -185,17 +177,17 @@ public class PacketPool {
 
         public void setPts(long pts) {
             delegate.pts(pts);
-        }
+        } */
 
         public long getDts() {
-            return delegate.dts();
+            return internal.dts();
         }
 
         public void setDts(long dts) {
-            delegate.dts(dts);
+            internal.dts(dts);
         }
 
-
+/*
         public long getDuration() {
             return delegate.duration();
         }
@@ -245,24 +237,22 @@ public class PacketPool {
         } */
 
 
-        public AVPacket clone() {
-            return clonePacket(delegate);
+        public PooledPacket clone() {
+            return clonePacket(internal);
+        }
+
+        public AVPacket getDelegate() {
+            return internal;
         }
 
 
         public void clone(AVPacket packet) {
-            // growing must be done here (to get the new buffer size)
-            /*int growBy = packet.Size() - getSize();
-            if (growBy > 0)
-                grow(growBy);
-
-            delegate.clone(packet);*/
-
+            //growing must be done here (to get the new buffer size)
             int growBy = packet.size() - getSize();
             if (growBy > 0)
                 grow(growBy);
 
-            int res = avcodecLibrary.av_packet_copy_props(getPointer(), Pointer.getPointer(packet));
+            int res = avcodecLibrary.av_packet_copy_props(Pointer.getPointer(internal), Pointer.getPointer(packet));
             if (res != 0)
                 throw new LibavRuntimeException(res);
 
@@ -270,12 +260,16 @@ public class PacketPool {
             if (pData != null)
                 pData.copyTo(getData(), packet.size());
             setSize(packet.size());
-
-            clearWrapperCache();
         }
 
-        public void rebind(Pointer<AVPacket> pointer) {
-            delegate = new AVPacket(pointer);
+        /*public void rebind(Pointer<AVPacket> pointer) {
+            internal = new AVPacket(pointer);
+            bufferSize = internal.size();
+        }*/
+
+        public void free() {
+            setSize(bufferSize);
+            recycle(this);
         }
     }
 
