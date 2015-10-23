@@ -27,13 +27,12 @@ import com.mutar.libav.api.IDecoder;
 import com.mutar.libav.api.data.IFrameConsumer;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
-import com.mutar.libav.api.util.AVRationalUtils;
 import com.mutar.libav.api.util.AVUtilLibraryUtil;
+import com.mutar.libav.api.util.Rational;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avformat.AVStream;
 import com.mutar.libav.bridge.avutil.AVFrame;
-import com.mutar.libav.bridge.avutil.AVRational;
 import com.mutar.libav.bridge.avutil.AvutilLibrary;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVMediaType;
 
@@ -47,7 +46,7 @@ public class VideoFrameDecoder implements IDecoder {
     private final AVStream stream;
     private final AVCodecContext cc;
 
-    private AVRational sTimeBase;
+    private Rational sTimeBase;
     private long pts;
     private long frameDuration;
 
@@ -71,10 +70,10 @@ public class VideoFrameDecoder implements IDecoder {
 
         AVCodecLibraryUtil.open(cc, AVCodecLibraryUtil.findDecoder(cc.codec_id()));
 
-        sTimeBase = AVRationalUtils.mul(stream.time_base(), 1000L);
+        sTimeBase = new Rational(stream.time_base()).mul(1000L);
         pts = 0;
-        AVRational avr1 = AVRationalUtils.mul(cc.time_base(),1000);
-        frameDuration = avr1.num()/avr1.den();
+
+        frameDuration =  new Rational(cc.time_base()).mul(1000).longValue();
 
         frame = AVUtilLibraryUtil.allocateFrame();
 
@@ -151,7 +150,8 @@ public class VideoFrameDecoder implements IDecoder {
     private AVFrame transformPts(AVFrame frame) {
         //System.out.printf("decoded frame: pts = %d, packet_pts = %d, packet_dts = %d, sTimeBase = %s\n", frame.getPts(), frame.getPacketPts(), frame.getPacketDts(), sTimeBase.toString());
         if (frame.pkt_dts() != AvutilLibrary.AV_NOPTS_VALUE) {
-            frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(sTimeBase, frame.pkt_dts())));
+        	frame.pts(sTimeBase.mul(frame.pkt_dts()).longValue());
+            //frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(sTimeBase, frame.pkt_dts())));
         } else {
             frame.pts(pts);
             pts += frameDuration;

@@ -30,7 +30,7 @@ import com.mutar.libav.api.data.IPacketConsumer;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.time.CopyTimestampGenerator;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
-import com.mutar.libav.api.util.AVRationalUtils;
+import com.mutar.libav.api.util.Rational;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avcodec.AVPicture;
@@ -39,7 +39,6 @@ import com.mutar.libav.bridge.avformat.AVFormatContext;
 import com.mutar.libav.bridge.avformat.AVStream;
 import com.mutar.libav.bridge.avformat.AvformatLibrary;
 import com.mutar.libav.bridge.avutil.AVFrame;
-import com.mutar.libav.bridge.avutil.AVRational;
 import com.mutar.libav.bridge.avutil.AvutilLibrary;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVMediaType;
 
@@ -57,8 +56,8 @@ public class VideoFrameEncoder implements IEncoder {
     private boolean rawFormat;
     
     private AVPacket packet;
-    private AVRational tsToCodecBase;
-    private AVRational tsToStreamBase;
+    private Rational tsToCodecBase;
+    private Rational tsToStreamBase;
     private ITimestampGenerator timestampGenerator;
     
     private final Set<IPacketConsumer> consumers;
@@ -157,10 +156,12 @@ public class VideoFrameEncoder implements IEncoder {
         if (initialized)
             return;
 
-        tsToCodecBase = AVRationalUtils.invert(AVRationalUtils.mul(cc.time_base(), 1000)); 
+        //tsToCodecBase = AVRationalUtils.invert(AVRationalUtils.mul(cc.time_base(), 1000)); 
+        tsToCodecBase = new Rational(cc.time_base()).mul(1000).invert();
         
         // propper time base is set after avformat_write_header() call
-        tsToStreamBase =AVRationalUtils.div(cc.time_base(), stream.time_base()); 
+        //tsToStreamBase =AVRationalUtils.div(cc.time_base(), stream.time_base()); 
+        tsToStreamBase = new Rational(cc.time_base()).div(new Rational(stream.time_base()));
         initialized = true;
     }
     
@@ -183,7 +184,8 @@ public class VideoFrameEncoder implements IEncoder {
                 gotPacket = AVCodecLibraryUtil.encodeVideoFrame(cc, null, packet);
             else {
                 long oldPts = frame.pts();
-                frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToCodecBase, pts)));
+                frame.pts(tsToCodecBase.mul(pts).longValue());
+                //frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToCodecBase, pts)));
                 gotPacket = AVCodecLibraryUtil.encodeVideoFrame(cc, frame, packet);
                 frame.pts(oldPts);
             }
@@ -197,9 +199,11 @@ public class VideoFrameEncoder implements IEncoder {
                 packet.flags(packet.flags() | AvcodecLibrary.AV_PKT_FLAG_KEY);
             //System.out.printf("encoding video frame: pts = %d (pts_offset = %d, source_pts = %d)\n", pts, timestampGenerator.getOffset(), frame.getPts());
             if (packet.pts() != AvutilLibrary.AV_NOPTS_VALUE)
-                packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToStreamBase, packet.pts())));
+            	packet.pts(tsToStreamBase.mul(packet.pts()).longValue());
+                //packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToStreamBase, packet.pts())));
             if (packet.dts() != AvutilLibrary.AV_NOPTS_VALUE)
-                packet.dts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToStreamBase, packet.dts())));
+            	packet.dts(tsToStreamBase.mul(packet.dts()).longValue());
+                //packet.dts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToStreamBase, packet.dts())));
         }
         
         return packet;

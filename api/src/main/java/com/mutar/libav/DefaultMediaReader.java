@@ -29,14 +29,13 @@ import com.mutar.libav.api.data.IPacketConsumer;
 import com.mutar.libav.api.data.PacketPool.PooledPacket;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.util.AVFormatLibraryUtil;
-import com.mutar.libav.api.util.AVRationalUtils;
 import com.mutar.libav.api.util.Buffer;
+import com.mutar.libav.api.util.Rational;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avformat.AVFormatContext;
 import com.mutar.libav.bridge.avformat.AVIOContext;
 import com.mutar.libav.bridge.avformat.AVInputFormat;
 import com.mutar.libav.bridge.avformat.AVStream;
-import com.mutar.libav.bridge.avutil.AVRational;
 
 
 /**
@@ -58,7 +57,7 @@ public class DefaultMediaReader implements IMediaReader {
 
     private List<Set<IPacketConsumer>> packetConsumers;
 
-    private AVRational[] timeBases;
+    private Rational[] timeBases;
     private long position;
 
     /**
@@ -104,7 +103,7 @@ public class DefaultMediaReader implements IMediaReader {
         streamBuffers = new ArrayList<Buffer<PooledPacket>>();
         bufferingEnabled = new boolean[streams.length];
         packetConsumers = new ArrayList<Set<IPacketConsumer>>();
-        timeBases = new AVRational[streams.length];
+        timeBases = new Rational[streams.length];
         int v = 0, a = 0;
 
         for (int i = 0; i < streams.length; i++) {
@@ -117,7 +116,7 @@ public class DefaultMediaReader implements IMediaReader {
                 case AVMEDIA_TYPE_AUDIO: a++; break;
                 default: break;
             }
-            timeBases[i] = AVRationalUtils.mul(streams[i].time_base(),1000);
+            timeBases[i] = new Rational(streams[i].time_base()).mul(1000);
         }
 
         vStreams = new int[v];
@@ -223,9 +222,9 @@ public class DefaultMediaReader implements IMediaReader {
     @Override
     public long getStreamDuration(int streamIndex) {
         AVStream stream = getStream(streamIndex);
-        AVRational tb = stream.time_base();
+        Rational tb = new Rational(stream.time_base());
 
-        return AVRationalUtils.longValue(AVRationalUtils.mul(AVRationalUtils.mul(tb, 1000), stream.duration()));
+        return tb.mul(1000).mul(stream.duration()).longValue();
     }
 
     @Override
@@ -391,7 +390,8 @@ public class DefaultMediaReader implements IMediaReader {
         Set<IPacketConsumer> pc = packetConsumers.get(packet.getStreamIndex());
 
         if (packet.getDts() > 0)
-            position = AVRationalUtils.longValue(AVRationalUtils.mul(timeBases[packet.getStreamIndex()], packet.getDts()));
+        	position = timeBases[packet.getStreamIndex()].mul(packet.getDts()).longValue();
+            //position = AVRationalUtils.longValue(AVRationalUtils.mul(timeBases[packet.getStreamIndex()], packet.getDts()));
 
         synchronized (pc) {
             for (IPacketConsumer c : pc)

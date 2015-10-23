@@ -10,14 +10,13 @@ import com.mutar.libav.api.IDecoder;
 import com.mutar.libav.api.data.IFrameConsumer;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
-import com.mutar.libav.api.util.AVRationalUtils;
 import com.mutar.libav.api.util.AVUtilLibraryUtil;
+import com.mutar.libav.api.util.Rational;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary;
 import com.mutar.libav.bridge.avformat.AVStream;
 import com.mutar.libav.bridge.avutil.AVFrame;
-import com.mutar.libav.bridge.avutil.AVRational;
 import com.mutar.libav.bridge.avutil.AvutilLibrary;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVMediaType;
 
@@ -26,7 +25,7 @@ public class AudioFrameDecoder implements IDecoder {
     private final AVStream stream;
     private final AVCodecContext cc;
 
-    private AVRational sTimeBase;
+    private Rational sTimeBase;
     private long pts;
 
     private AVFrame audioFrame;
@@ -50,7 +49,7 @@ public class AudioFrameDecoder implements IDecoder {
             throw new IllegalArgumentException("not an audio stream");
         AVCodecLibraryUtil.open(cc, AVCodecLibraryUtil.findDecoder(cc.codec_id()));
 
-        sTimeBase = AVRationalUtils.mul(stream.time_base(), 1000L);
+        sTimeBase = new Rational(stream.time_base()).mul(1000L);
         pts = 0;
 
         audioFrame = AVUtilLibraryUtil.allocateFrame();
@@ -137,7 +136,8 @@ public class AudioFrameDecoder implements IDecoder {
 
     private AVFrame transformPts(AVFrame frame) {
         if (frame.pkt_dts() != AvutilLibrary.AV_NOPTS_VALUE)
-            frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(sTimeBase, frame.pkt_dts())));
+        	frame.pts(sTimeBase.mul(frame.pkt_dts()).longValue());
+            //frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(sTimeBase, frame.pkt_dts())));
         else {
             frame.pts(pts);
             pts += frame.linesize().get(0) * 1000 / (cc.channels() * cc.sample_rate() * AVUtilLibraryUtil.getBytesPerSample(cc.sample_fmt()));

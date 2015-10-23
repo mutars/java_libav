@@ -29,7 +29,7 @@ import com.mutar.libav.bridge.avutil.AvutilLibrary.AVSampleFormat;
  * a tool written by <a href="http://ochafik.com/">Olivier Chafik</a> that <a href="http://code.google.com/p/jnaerator/wiki/CreditsAndLicense">uses a few opensource projects.</a>.<br>
  * For help, please visit <a href="http://nativelibs4java.googlecode.com/">NativeLibs4Java</a> or <a href="http://bridj.googlecode.com/">BridJ</a> .
  */
-@Library(value="avcodec", dependencies= {"swresample", "x264", "fdk-aac"})
+@Library(value="avcodec", dependencies= {"swresample", "x264", "fdk-aac", "libvpx"})
 @Runtime(CRuntime.class)
 public class AvcodecLibrary {
     static {

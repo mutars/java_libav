@@ -30,15 +30,14 @@ import com.mutar.libav.api.data.IPacketConsumer;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.time.CopyTimestampGenerator;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
-import com.mutar.libav.api.util.AVRationalUtils;
 import com.mutar.libav.api.util.AVUtilLibraryUtil;
+import com.mutar.libav.api.util.Rational;
 import com.mutar.libav.bridge.avcodec.AVCodec;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AVPacket;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary;
 import com.mutar.libav.bridge.avformat.AVStream;
 import com.mutar.libav.bridge.avutil.AVFrame;
-import com.mutar.libav.bridge.avutil.AVRational;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVMediaType;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVSampleFormat;
 
@@ -58,13 +57,13 @@ public class AudioFrameEncoder implements IEncoder {
     private int frameSize;
     private int frameSampleCount;
     private long frameDuration;
-    private AVRational byteDuration;
+    private Rational byteDuration;
 
     private AVPacket packet;
 
     private long flushFramePts;
     private int offset;
-    private AVRational ptsTransformBase;
+    private Rational ptsTransformBase;
     private ITimestampGenerator timestampGenerator;
 
     private final Set<IPacketConsumer> consumers;
@@ -205,11 +204,12 @@ public class AudioFrameEncoder implements IEncoder {
         bufferSampleCapacity = lineSize * planeCount / (channelCount * bytesPerSample);
 
         frameDuration = 1000 * frameSampleCount / cc.sample_rate();
-        byteDuration = AVRationalUtils.createNew(frameDuration, frameSize);
+        byteDuration = new Rational(frameDuration, frameSize);
         offset = 0;
 
         // propper time base is set after avformat_write_header() call
-        ptsTransformBase = AVRationalUtils.invert(AVRationalUtils.mul(stream.time_base(), 1000));
+        //ptsTransformBase = AVRationalUtils.invert(AVRationalUtils.mul(stream.time_base(), 1000));
+        ptsTransformBase = new Rational(stream.time_base()).mul(1000).invert();
 
         initialized = true;
     }
@@ -234,7 +234,9 @@ public class AudioFrameEncoder implements IEncoder {
         boolean result;
         if (result = AVCodecLibraryUtil.encodeAudioFrame(cc, sampleCount == 0 ? null : tmpFrame, packet)) {
             packet.stream_index(stream.index());
-            packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(ptsTransformBase,flushFramePts)));
+            //packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(ptsTransformBase,flushFramePts)));
+            packet.pts(ptsTransformBase.mul(flushFramePts).longValue());
+            
             packet.dts(packet.pts());
             sendPacket(packet);
             flushFramePts += frameDuration;
@@ -246,8 +248,8 @@ public class AudioFrameEncoder implements IEncoder {
     private void encodeFrame(AVFrame frame, long pts) throws LibavException {
         int lineSize = frame.linesize().get(0);
         int size = lineSize;
-        pts -= AVRationalUtils.longValue(AVRationalUtils.mul(byteDuration, offset));
-
+        //pts -= AVRationalUtils.longValue(AVRationalUtils.mul(byteDuration, offset));
+        pts -= byteDuration.mul(offset).longValue();
         while (size > 0) {
             size -= appendSamples(frame, lineSize - size);
 
@@ -262,7 +264,8 @@ public class AudioFrameEncoder implements IEncoder {
                 if (AVCodecLibraryUtil.encodeAudioFrame(cc, tmpFrame, packet)) {
                     //System.out.printf("encoding audio frame: pts = %d (pts_offset = %d, source_pts = %d)\n", pts, timestampGenerator.getOffset(), frame.getPts());
                     packet.stream_index(stream.index());
-                    packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(ptsTransformBase, pts)));
+                    //packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(ptsTransformBase, pts)));
+                    packet.pts(ptsTransformBase.mul(pts).longValue());
                     packet.dts(packet.pts());
                     sendPacket(packet);
                     pts += frameDuration;
