@@ -17,14 +17,8 @@ import com.mutar.libav.service.LibraryManager;
 public final class AVUtilLibraryUtil {
 
     private static final AvutilLibrary utilLib;
-    //private static NativeLibrary lib ;
     static {
         utilLib  = LibraryManager.getInstance().getAvUtil();
-        /*try {
-            lib = BridJ.getNativeLibrary(AvutilLibrary.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
     }
 
     public static AVFrame allocateFrame() throws LibavException {
@@ -150,11 +144,5 @@ public final class AVUtilLibraryUtil {
         }
         return sample_fmts.get(0);
     }
-
-    //XXX Potential Performance issue
-    /*public static boolean functionExists(String functionName) {
-        return lib.getSymbol(functionName) != null;
-    }*/
-
 
 }

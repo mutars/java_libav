@@ -145,6 +145,7 @@ public class DefaultMediaWriter implements IMediaWriter {
         cc.codec_id(codecId);
         cc.width(width);
         cc.height(height);
+        cc.gop_size(10);
         cc.time_base().num(1);
         cc.time_base().den(25);
 

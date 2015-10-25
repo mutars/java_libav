@@ -42,6 +42,7 @@ public class TranscodeSample {
         //String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
         String dstUrl = "/home/mutar/bar2.mp4"; // destination file name
         AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_H264; // output video codec
+        AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_MP3;
 
         IMediaDecoder md = null;
         IMediaEncoder me = null;
@@ -63,15 +64,10 @@ public class TranscodeSample {
 
             // init audio transcoding of the first audio stream if there is at
             // least one audio stream
-            /*if (mr.getAudioStreamCount() > 0) {
+            if (mr.getAudioStreamCount() > 0) {
                 md.setAudioStreamDecodingEnabled(0, true);
-                dec = md.getAudioStreamDecoder(0);
-                cc1 = dec.getCodecContext();
-                si = mw.addAudioStream(audioCodecId, cc1.sample_rate(), cc1.sample_fmt(), cc1.channels());
-                si2 = mw2.addAudioStream(audioCodecId, cc1.sample_rate(), cc1.sample_fmt(), cc1.channels());
-                dec.addFrameConsumer(me.getAudioStreamEncoder(si));
-                dec.addFrameConsumer(me2.getAudioStreamEncoder(si2));
-            }*/
+                addAudioStreamChain(md, audioCodecId, me);
+            }
 
             mw.writeHeader(); // write file header
             boolean hasNext = true;
@@ -99,6 +95,13 @@ public class TranscodeSample {
         }
         System.out.println("total encoding time = " + (System.currentTimeMillis() - startTime)/1000);
     }
+
+	private static void addAudioStreamChain(IMediaDecoder md,AVCodecID audioCodecId, IMediaEncoder me) throws LibavException {
+		IDecoder dec = md.getAudioStreamDecoder(0);
+		AVCodecContext cc1 = dec.getCodecContext();
+		int si = me.getMediaWriter().addAudioStream(audioCodecId, cc1.sample_rate(), cc1.sample_fmt(), cc1.channels());
+		dec.addFrameConsumer(me.getAudioStreamEncoder(si));
+	}
 
     public static Runnable createEncodingChain(IMediaDecoder md, AVCodecID videoCodecId, IMediaEncoder me) throws LibavException {
         IDecoder dec = md.getVideoStreamDecoder(0);
