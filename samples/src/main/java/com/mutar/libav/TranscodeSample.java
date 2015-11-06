@@ -30,6 +30,7 @@ import com.mutar.libav.api.IMediaReader;
 import com.mutar.libav.api.IMediaWriter;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
+import com.mutar.libav.api.util.AVUtilLibraryUtil;
 import com.mutar.libav.audio.AudioFrameResampler;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
@@ -39,9 +40,9 @@ import com.mutar.libav.video.FrameScaler;
 public class TranscodeSample {
 
     public static void main(String[] args) {
-        String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
+        String srcUrl = "/home/sergey/Videos/01-20070924121509NR.asf"; // some source multimedia file/stream
         //String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
-        String dstUrl = "/home/sergey/bar2.mkv"; // destination file name
+        String dstUrl = "/home/sergey/bar2.avi"; // destination file name
         AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_MPEG4; // output video codec
         AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_AAC;
 
@@ -104,7 +105,13 @@ public class TranscodeSample {
         IEncoder audioStreamEncoder = me.getAudioStreamEncoder(si);
         AVCodecContext codecContext = audioStreamEncoder.getCodecContext();
         if (codecContext.sample_fmt() != cc1.sample_fmt()) {
-            AudioFrameResampler resampler = new AudioFrameResampler(cc1.channel_layout(),codecContext.channel_layout(),cc1.sample_rate(),codecContext.sample_rate(),cc1.sample_fmt(),codecContext.sample_fmt());
+            long channelLayout;
+            if (cc1.channel_layout() == 0) {
+                channelLayout = AVUtilLibraryUtil.getDefaultChannelLayout(cc1.channels());
+            } else {
+                channelLayout = cc1.channel_layout();
+            }
+            AudioFrameResampler resampler = new AudioFrameResampler(channelLayout,codecContext.channel_layout(),cc1.sample_rate(),codecContext.sample_rate(),cc1.sample_fmt(),codecContext.sample_fmt());
             resampler.addFrameConsumer(audioStreamEncoder);
             dec.addFrameConsumer(resampler);
         } else {
