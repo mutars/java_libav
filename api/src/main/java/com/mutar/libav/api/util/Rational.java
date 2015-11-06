@@ -4,18 +4,18 @@ import com.mutar.libav.bridge.avutil.AVRational;
 
 /**
  * Immutable rational number.
- * 
+ *
  * @author Ondrej Perutka
  */
 public class Rational extends Number implements Comparable<Rational> {
-    
-	private static final long serialVersionUID = 1313334807168016166L;
-	private long num;
+
+    private static final long serialVersionUID = 1313334807168016166L;
+    private long num;
     private long den;
-    
+
     /**
      * Create a new rational number.
-     * 
+     *
      * @param num numerator
      * @param den denominator
      */
@@ -23,29 +23,29 @@ public class Rational extends Number implements Comparable<Rational> {
         this.num = num;
         this.den = den;
     }
-    
+
     /**
      * Create a new rational number from the given AVRational.
-     * @param r 
+     * @param r
      */
     public Rational(AVRational r) {
         this.num = r.num();
         this.den = r.den();
     }
-    
+
     /**
      * Create a new rational number and set the denominator to 1.
-     * 
+     *
      * @param nr numerator
      */
     public Rational(long nr) {
         this(nr, 1);
     }
-    
+
     /**
-     * Multiple this rational number with the given one and return the 
+     * Multiple this rational number with the given one and return the
      * normalized result.
-     * 
+     *
      * @param r a rational number
      * @return normalized result
      */
@@ -55,11 +55,11 @@ public class Rational extends Number implements Comparable<Rational> {
         long gcd = gcd(n, d);
         return new Rational(n / gcd, d / gcd);
     }
-    
+
     /**
      * Divide this rational number by the given one and return the normalized
      * result.
-     * 
+     *
      * @param r a rational number
      * @return normalized result
      */
@@ -69,46 +69,48 @@ public class Rational extends Number implements Comparable<Rational> {
         long gcd = gcd(n, d);
         return new Rational(n / gcd, d / gcd);
     }
-    
+
     /**
-     * Multiple this rational number with the given number and return the 
+     * Multiple this rational number with the given number and return the
      * normalized result.
-     * 
+     *
      * @param num a number
      * @return normalized result
      */
     public Rational mul(long num) {
         long n = this.num * num;
         long gcd = gcd(n, this.den);
+        //return new Rational(Math.round((float)n / (float)gcd), Math.round((float)this.den / (float)gcd));
         return new Rational(n / gcd, this.den / gcd);
     }
-    
+
     /**
      * Divide this rational number by the given number and return the normalized
      * result.
-     * 
+     *
      * @param num a number
      * @return normalized result
      */
     public Rational div(long num) {
         long d = this.den * num;
         long gcd = gcd(this.num, d);
+        //return new Rational(Math.round((float)this.num / (float)gcd), Math.round((float)d / (float)gcd));
         return new Rational(this.num / gcd, d / gcd);
     }
-    
+
     /**
      * Exchange the numerator and the denominator and return the result.
-     * 
+     *
      * @return inverted number
      */
     public Rational invert() {
         return new Rational(this.den, this.num);
     }
-    
+
     /**
      * Normalize this rational number and return the result. It will divide
      * the numerator and the denominator by their greatest common divider.
-     * 
+     *
      * @return normalized rational
      */
     public Rational normalize() {
@@ -118,7 +120,7 @@ public class Rational extends Number implements Comparable<Rational> {
 
     /**
      * Get numerator.
-     * 
+     *
      * @return numerator
      */
     public long getDenominator() {
@@ -127,7 +129,7 @@ public class Rational extends Number implements Comparable<Rational> {
 
     /**
      * Get denominator.
-     * 
+     *
      * @return denominator
      */
     public long getNumerator() {
@@ -141,7 +143,9 @@ public class Rational extends Number implements Comparable<Rational> {
 
     @Override
     public long longValue() {
-        return num / den;
+        //System.out.println("longvalue=" + Math.round(((double)num / (double)den)));
+        //return Math.round(((float)num / (float)den));
+        return num/den;
     }
 
     @Override
@@ -158,12 +162,12 @@ public class Rational extends Number implements Comparable<Rational> {
     public int compareTo(Rational t) {
         long l = this.num * t.den;
         long r = this.den * t.num;
-        
+
         if (l < r)
             return -1;
         else if (l > r)
             return 1;
-        
+
         return 0;
     }
 
@@ -181,7 +185,7 @@ public class Rational extends Number implements Comparable<Rational> {
         final Rational other = (Rational) obj;
         if (this.num != other.num)
             return false;
-        
+
         return this.den == other.den;
     }
 
@@ -192,21 +196,21 @@ public class Rational extends Number implements Comparable<Rational> {
         hash = 89 * hash + (int) (this.den ^ (this.den >>> 32));
         return hash;
     }
-    
+
     private static long gcd(long a, long b) {
         if (a < 0)
             a = -a;
         if (b < 0)
             b = -b;
-        
+
         long tmp;
         while (b > 0) {
             tmp = a % b;
             a = b;
             b = tmp;
         }
-        
+
         return a;
     }
-    
+
 }

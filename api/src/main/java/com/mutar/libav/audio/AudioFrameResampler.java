@@ -48,7 +48,7 @@ public class AudioFrameResampler implements IFrameConsumer, IFrameProducer {
      * @param outputSampleFormat a sample format of the output frames
      * @throws LibavException if an error occurs
      */
-    public AudioFrameResampler(long inputChannelLayout, long outputChannelLayout, int inputSampleRate, int outputSampleRate, AVSampleFormat inputSampleFormat, AVSampleFormat outputSampleFormat) throws LibavException {
+    public AudioFrameResampler(long inputChannelLayout, long outputChannelLayout, int inputSampleRate, int outputSampleRate, IntValuedEnum<AVSampleFormat> inputSampleFormat, IntValuedEnum<AVSampleFormat> outputSampleFormat) throws LibavException {
         this.inputChannelLayout = inputChannelLayout;
         this.inputChannelCount = AVUtilLibraryUtil.getChannelCount(inputChannelLayout);
         this.inputSampleRate = inputSampleRate;

@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2012 Ondrej Perutka
  *
- * This program is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation, either 
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation, either
  * version 3 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
@@ -11,8 +11,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public 
- * License along with this library. If not, see 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
  * <http://www.gnu.org/licenses/>.
  */
 package com.mutar.libav.video;
@@ -44,27 +44,27 @@ import com.mutar.libav.bridge.avutil.AvutilLibrary.AVMediaType;
 
 /**
  * Video frame encoder.
- * 
+ *
  * @author Ondrej Perutka
  */
 public class VideoFrameEncoder implements IEncoder {
-    
+
     private final AVStream stream;
     private final AVCodecContext cc;
     private boolean initialized;
-    
+
     private boolean rawFormat;
-    
+
     private AVPacket packet;
     private Rational tsToCodecBase;
     private Rational tsToStreamBase;
     private ITimestampGenerator timestampGenerator;
-    
+
     private final Set<IPacketConsumer> consumers;
-    
+
     /**
      * Create a new video frame encoder for the given video stream.
-     * 
+     *
      * @param formatContext a format context
      * @param stream a video stream
      * @throws LibavException if the frame encoder cannot be crated (caused
@@ -72,29 +72,29 @@ public class VideoFrameEncoder implements IEncoder {
      */
     public VideoFrameEncoder(AVFormatContext formatContext, AVStream stream) throws LibavException {
         this.stream = stream;
-        
+
         cc = stream.codec().get();
         if (cc.codec_type() != AVMediaType.AVMEDIA_TYPE_VIDEO)
             throw new IllegalArgumentException("not a video stream");
 
-        
+
         initialized = false;
-        
+
         rawFormat = (formatContext.oformat().get().flags() & AvformatLibrary.AVFMT_RAWPICTURE) != 0;
-        
+
         packet = AVCodecLibraryUtil.alloc_packet();
         tsToCodecBase = null;
         tsToStreamBase = null;
         timestampGenerator = new CopyTimestampGenerator();
-        
+
         consumers = Collections.synchronizedSet(new HashSet<IPacketConsumer>());
     }
-    
+
     @Override
     public AVCodecContext getCodecContext() {
         return cc;
     }
-    
+
     @Override
     public AVStream getStream() {
         return stream;
@@ -109,65 +109,66 @@ public class VideoFrameEncoder implements IEncoder {
     public void setTimestampGenerator(ITimestampGenerator timestampGenerator) {
         this.timestampGenerator = timestampGenerator;
     }
-    
+
     @Override
     public synchronized void close() {
         AVCodecLibraryUtil.close(cc);
         if (packet != null)
-        	AVCodecLibraryUtil.free(packet);
+            AVCodecLibraryUtil.free(packet);
         packet = null;
     }
-    
+
     @Override
     public boolean isClosed() {
         return packet == null;
     }
-    
+
     @Override
     public synchronized void processFrame(Object producer, AVFrame frame) throws LibavException {
         if (isClosed())
             return;
-        
+
         initEncoder();
-        
+
         AVPacket p;
         long pts;
-        
+
         while ((pts = timestampGenerator.nextFrame(frame.pts())) >= 0) {
+            //System.out.println("original pts=" + frame.pts() + " generated pts=" + pts);
             p = encodeFrame(frame, pts);
             if (p != null)
                 sendPacket(p);
         }
     }
-    
+
     @Override
     public synchronized void flush() throws LibavException {
         if (isClosed())
             return;
-        
+
         initEncoder();
-        
+
         AVPacket p;
         while ((p = encodeFrame(null, timestampGenerator.getLastTimestamp())) != null)
             sendPacket(p);
     }
-    
+
     private void initEncoder() throws LibavException {
         if (initialized)
             return;
 
-        //tsToCodecBase = AVRationalUtils.invert(AVRationalUtils.mul(cc.time_base(), 1000)); 
+        //tsToCodecBase = AVRationalUtils.invert(AVRationalUtils.mul(cc.time_base(), 1000));
         tsToCodecBase = new Rational(cc.time_base()).mul(1000).invert();
-        
+
         // propper time base is set after avformat_write_header() call
-        //tsToStreamBase =AVRationalUtils.div(cc.time_base(), stream.time_base()); 
+        //tsToStreamBase =AVRationalUtils.div(cc.time_base(), stream.time_base());
         tsToStreamBase = new Rational(cc.time_base()).div(new Rational(stream.time_base()));
         initialized = true;
     }
-    
+
     private AVPacket encodeFrame(AVFrame frame, long pts) throws LibavException {
-    	AVCodecLibraryUtil.alloc(packet);
-        
+        AVCodecLibraryUtil.alloc(packet);
+
         if (rawFormat) {
             if (frame == null)
                 return null;
@@ -184,31 +185,32 @@ public class VideoFrameEncoder implements IEncoder {
                 gotPacket = AVCodecLibraryUtil.encodeVideoFrame(cc, null, packet);
             else {
                 long oldPts = frame.pts();
+                //System.out.println("transformed pts= " + tsToCodecBase.mul(pts).longValue());
                 frame.pts(tsToCodecBase.mul(pts).longValue());
                 //frame.pts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToCodecBase, pts)));
                 gotPacket = AVCodecLibraryUtil.encodeVideoFrame(cc, frame, packet);
                 frame.pts(oldPts);
             }
-            
+
             if (!gotPacket)
                 return null;
-            
+
             packet.stream_index(stream.index());
             AVFrame codedFrame = new AVFrame(cc.coded_frame());
             if (codedFrame.key_frame() == 1)
                 packet.flags(packet.flags() | AvcodecLibrary.AV_PKT_FLAG_KEY);
             //System.out.printf("encoding video frame: pts = %d (pts_offset = %d, source_pts = %d)\n", pts, timestampGenerator.getOffset(), frame.getPts());
             if (packet.pts() != AvutilLibrary.AV_NOPTS_VALUE)
-            	packet.pts(tsToStreamBase.mul(packet.pts()).longValue());
+                packet.pts(tsToStreamBase.mul(packet.pts()).longValue());
                 //packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToStreamBase, packet.pts())));
             if (packet.dts() != AvutilLibrary.AV_NOPTS_VALUE)
-            	packet.dts(tsToStreamBase.mul(packet.dts()).longValue());
+                packet.dts(tsToStreamBase.mul(packet.dts()).longValue());
                 //packet.dts(AVRationalUtils.longValue(AVRationalUtils.mul(tsToStreamBase, packet.dts())));
         }
-        
+
         return packet;
     }
-    
+
     private void sendPacket(AVPacket packet) throws LibavException {
         synchronized (consumers) {
             for (IPacketConsumer c : consumers)
@@ -225,5 +227,5 @@ public class VideoFrameEncoder implements IEncoder {
     public void removePacketConsumer(IPacketConsumer c) {
         consumers.remove(c);
     }
-    
+
 }

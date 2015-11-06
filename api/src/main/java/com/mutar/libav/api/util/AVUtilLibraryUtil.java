@@ -7,6 +7,7 @@ import org.bridj.NativeObject;
 import org.bridj.Pointer;
 
 import com.mutar.libav.api.exception.LibavException;
+import com.mutar.libav.bridge.avcodec.AVCodec;
 import com.mutar.libav.bridge.avutil.AVFrame;
 import com.mutar.libav.bridge.avutil.AvutilLibrary;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVPixelFormat;
@@ -143,6 +144,21 @@ public final class AVUtilLibraryUtil {
             if(sample_fmts.get(i).equals(sample_fmt)) return sample_fmt;
         }
         return sample_fmts.get(0);
+    }
+
+    public static int selectSampleRate(AVCodec codec, int sample_rate) {
+        if (codec.supported_samplerates() == null) {
+            return sample_rate;
+        }
+        int best_samplerate = 0;
+        for (Integer sRate : codec.supported_samplerates()) {
+            if (sRate == 0) break;
+            if (sRate.equals(sample_rate) && sample_rate > 0) {
+                return sample_rate;
+            }
+            best_samplerate = Math.max(sRate, best_samplerate);
+        }
+        return best_samplerate;
     }
 
 }

@@ -30,6 +30,7 @@ import com.mutar.libav.api.IMediaReader;
 import com.mutar.libav.api.IMediaWriter;
 import com.mutar.libav.api.exception.LibavException;
 import com.mutar.libav.api.util.AVCodecLibraryUtil;
+import com.mutar.libav.audio.AudioFrameResampler;
 import com.mutar.libav.bridge.avcodec.AVCodecContext;
 import com.mutar.libav.bridge.avcodec.AvcodecLibrary.AVCodecID;
 import com.mutar.libav.bridge.avutil.AvutilLibrary.AVPixelFormat;
@@ -38,11 +39,11 @@ import com.mutar.libav.video.FrameScaler;
 public class TranscodeSample {
 
     public static void main(String[] args) {
-        String srcUrl = "/home/mutar/Videos/01-20070924121509NR.asf"; // some source multimedia file/stream
+        String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
         //String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
-        String dstUrl = "/home/mutar/bar2.mp4"; // destination file name
-        AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_H264; // output video codec
-        AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_MP3;
+        String dstUrl = "/home/sergey/bar2.mkv"; // destination file name
+        AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_MPEG4; // output video codec
+        AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_AAC;
 
         IMediaDecoder md = null;
         IMediaEncoder me = null;
@@ -96,12 +97,20 @@ public class TranscodeSample {
         System.out.println("total encoding time = " + (System.currentTimeMillis() - startTime)/1000);
     }
 
-	private static void addAudioStreamChain(IMediaDecoder md,AVCodecID audioCodecId, IMediaEncoder me) throws LibavException {
-		IDecoder dec = md.getAudioStreamDecoder(0);
-		AVCodecContext cc1 = dec.getCodecContext();
-		int si = me.getMediaWriter().addAudioStream(audioCodecId, cc1.sample_rate(), cc1.sample_fmt(), cc1.channels());
-		dec.addFrameConsumer(me.getAudioStreamEncoder(si));
-	}
+    private static void addAudioStreamChain(IMediaDecoder md,AVCodecID audioCodecId, IMediaEncoder me) throws LibavException {
+        IDecoder dec = md.getAudioStreamDecoder(0);
+        AVCodecContext cc1 = dec.getCodecContext();
+        int si = me.getMediaWriter().addAudioStream(audioCodecId, cc1.sample_rate(), cc1.sample_fmt(), cc1.channels());
+        IEncoder audioStreamEncoder = me.getAudioStreamEncoder(si);
+        AVCodecContext codecContext = audioStreamEncoder.getCodecContext();
+        if (codecContext.sample_fmt() != cc1.sample_fmt()) {
+            AudioFrameResampler resampler = new AudioFrameResampler(cc1.channel_layout(),codecContext.channel_layout(),cc1.sample_rate(),codecContext.sample_rate(),cc1.sample_fmt(),codecContext.sample_fmt());
+            resampler.addFrameConsumer(audioStreamEncoder);
+            dec.addFrameConsumer(resampler);
+        } else {
+            dec.addFrameConsumer(audioStreamEncoder);
+        }
+    }
 
     public static Runnable createEncodingChain(IMediaDecoder md, AVCodecID videoCodecId, IMediaEncoder me) throws LibavException {
         IDecoder dec = md.getVideoStreamDecoder(0);

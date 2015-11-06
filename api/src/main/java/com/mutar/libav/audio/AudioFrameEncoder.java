@@ -236,7 +236,7 @@ public class AudioFrameEncoder implements IEncoder {
             packet.stream_index(stream.index());
             //packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(ptsTransformBase,flushFramePts)));
             packet.pts(ptsTransformBase.mul(flushFramePts).longValue());
-            
+
             packet.dts(packet.pts());
             sendPacket(packet);
             flushFramePts += frameDuration;

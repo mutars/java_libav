@@ -96,7 +96,6 @@ public class DefaultMediaWriter implements IMediaWriter {
 
         for (int i = 0; i < streams.length; i++) {
             ccs[i] = streams[i].codec().get();
-            //XXX TEST IT
             switch (ccs[i].codec_type().iterator().next()) {
                 case AVMEDIA_TYPE_VIDEO: v++; break;
                 case AVMEDIA_TYPE_AUDIO: a++; break;
@@ -173,6 +172,7 @@ public class DefaultMediaWriter implements IMediaWriter {
             throw new IllegalStateException("the media stream has been closed");
 
         AVCodec codec = AVCodecLibraryUtil.findEncoder(codecId);
+
         AVStream stream = AVFormatLibraryUtil.newStream(formatContext);
         AVCodecContext cc = stream.codec().get();
 
@@ -180,10 +180,15 @@ public class DefaultMediaWriter implements IMediaWriter {
 
         cc.codec_id(codecId);
         cc.bit_rate(192000);
-        cc.sample_rate(sampleRate);
-        cc.sample_fmt(AVUtilLibraryUtil.getSupportedFormat(codec.sample_fmts(), sampleFormat));
+        int bestSampleRate = AVUtilLibraryUtil.selectSampleRate(cc.codec().get(), sampleRate);
+        cc.sample_rate(bestSampleRate);
+        IntValuedEnum<AVSampleFormat> bestSupportedFormat = AVUtilLibraryUtil.getSupportedFormat(codec.sample_fmts(), sampleFormat);
+        cc.sample_fmt(bestSupportedFormat);
         cc.channels(channelCount);
         cc.channel_layout(AVUtilLibraryUtil.getDefaultChannelLayout(channelCount));
+        cc.time_base().den(bestSampleRate);
+        cc.time_base().num(1);
+        cc.strict_std_compliance(AvcodecLibrary.FF_COMPLIANCE_EXPERIMENTAL);
 
         AVOutputFormat ofw = formatContext.oformat().get();
         if ((ofw.flags() & AvformatLibrary.AVFMT_GLOBALHEADER) != 0)
