@@ -40,9 +40,9 @@ import com.mutar.libav.video.FrameScaler;
 public class TranscodeSample {
 
     public static void main(String[] args) {
-        String srcUrl = "/home/sergey/Videos/01-20070924121509NR.asf"; // some source multimedia file/stream
+        String srcUrl = "/home/mutar/Videos/01-20070924121509NR.asf"; // some source multimedia file/stream
         //String srcUrl = "/home/sergey/Videos/test1.mp4"; // some source multimedia file/stream
-        String dstUrl = "/home/sergey/bar2.avi"; // destination file name
+        String dstUrl = "/home/mutar/bar2.avi"; // destination file name
         AVCodecID videoCodecId = AVCodecID.AV_CODEC_ID_MPEG4; // output video codec
         AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_AAC;
 

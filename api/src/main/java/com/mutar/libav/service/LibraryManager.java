@@ -27,7 +27,9 @@ import com.mutar.libav.bridge.swscale.SwscaleLibrary;
 public class LibraryManager {
 
     private static final String PKEY_LIBPATH = "org.libav.libpath";
-    private static final String DEFAULT_LIBPATH = "/home/sergey/libav/lib";
+    //private static final String DEFAULT_LIBPATH = "/home/sergey/libav/lib";
+    private static final String DEFAULT_LIBPATH = "/home/mutar/libav/lib";
+    
 
     private static LibraryManager instance = null;
 

@@ -144,8 +144,8 @@ public class Rational extends Number implements Comparable<Rational> {
     @Override
     public long longValue() {
         //System.out.println("longvalue=" + Math.round(((double)num / (double)den)));
-        //return Math.round(((float)num / (float)den));
-        return num/den;
+        return Math.round(((double)num / (double)den));
+        //return num/den;
     }
 
     @Override

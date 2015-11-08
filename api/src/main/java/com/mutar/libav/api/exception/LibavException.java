@@ -32,6 +32,8 @@ public class LibavException extends Exception {
 
     private static final long serialVersionUID = -7026667722399628992L;
     private static final AvutilLibrary lib = LibraryManager.getInstance().getAvUtil();
+    private static int lastErrorCode = 0;
+    private static String lastErrorString = "";
 
     public LibavException(int errorCode, Throwable thrwbl) {
         super(getLibavErrorDescription(errorCode) + "(" + errorCode + ")", thrwbl);
@@ -57,6 +59,11 @@ public class LibavException extends Exception {
     }
 
     public static String getLibavErrorDescription(int errorCode) {
+    	if(errorCode == lastErrorCode) {
+    		return lastErrorString;
+    	} else {
+    		lastErrorCode = errorCode;
+    	}
         Pointer<Byte> ptr = Pointer.allocateBytes(2048);
         if (ptr == null)
             return "memory allocation error, unable to get the Libav error description";

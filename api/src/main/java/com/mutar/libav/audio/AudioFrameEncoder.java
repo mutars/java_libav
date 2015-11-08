@@ -246,9 +246,9 @@ public class AudioFrameEncoder implements IEncoder {
     }
 
     private void encodeFrame(AVFrame frame, long pts) throws LibavException {
+    	//System.out.println("processing pts=" + pts + " offset=" + offset);
         int lineSize = frame.linesize().get(0);
         int size = lineSize;
-        //pts -= AVRationalUtils.longValue(AVRationalUtils.mul(byteDuration, offset));
         pts -= byteDuration.mul(offset).longValue();
         while (size > 0) {
             size -= appendSamples(frame, lineSize - size);
@@ -262,9 +262,8 @@ public class AudioFrameEncoder implements IEncoder {
                 packet.size(0);
 
                 if (AVCodecLibraryUtil.encodeAudioFrame(cc, tmpFrame, packet)) {
-                    //System.out.printf("encoding audio frame: pts = %d (pts_offset = %d, source_pts = %d)\n", pts, timestampGenerator.getOffset(), frame.getPts());
+                    //System.out.printf("encoding audio frame: pts = %d (pts_offset = %d, source_pts = %d)\n", pts, timestampGenerator.getInputOffset(), frame.pts());
                     packet.stream_index(stream.index());
-                    //packet.pts(AVRationalUtils.longValue(AVRationalUtils.mul(ptsTransformBase, pts)));
                     packet.pts(ptsTransformBase.mul(pts).longValue());
                     packet.dts(packet.pts());
                     sendPacket(packet);
